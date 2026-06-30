@@ -1,0 +1,194 @@
+/* ================================================================
+   Proyecto.css — Estilos de la ruta /proyecto
+   Flujo vertical de tarjetas numeradas + sección entradas/procesos/salidas
+   ================================================================ */
+
+/* ── Encabezado de la página ────────────────────────────────────── */
+.proyecto-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.proyecto-main-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8B949E;
+  margin-bottom: 0.5rem;
+}
+
+.proyecto-subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82rem;
+  color: #484F58;
+  max-width: 500px;
+  margin: 0 auto;
+  line-height: 1.7;
+}
+
+/* ── Flujo vertical centrado ────────────────────────────────────── */
+.flow-container {
+  max-width: 680px;
+  margin: 0 auto 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+/* ── Tarjeta de paso ────────────────────────────────────────────── */
+.flow-card {
+  width: 100%;
+  background: #161B22;
+  border: 1px solid #21262D;
+  border-radius: 12px;
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  position: relative;
+}
+
+/* Ícono cuadrado a la izquierda */
+.flow-card-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+}
+
+/* Colores por etapa (igual a capturas) */
+.icon-sensor  { background: rgba(74,222,128,0.12); border-color: rgba(74,222,128,0.25); }
+.icon-esp32   { background: rgba(56,189,248,0.12); border-color: rgba(56,189,248,0.25); }
+.icon-flask   { background: rgba(167,139,250,0.12);border-color: rgba(167,139,250,0.25);}
+.icon-db      { background: rgba(251,191,36,0.12); border-color: rgba(251,191,36,0.25); }
+.icon-react   { background: rgba(236,72,153,0.12); border-color: rgba(236,72,153,0.25); }
+.icon-user    { background: rgba(99,102,241,0.12); border-color: rgba(99,102,241,0.25); }
+
+/* Contenido: título + descripción */
+.flow-card-body {
+  flex: 1;
+}
+
+.flow-card-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-bottom: 0.3rem;
+}
+
+/* Colores de título por etapa */
+.title-sensor { color: #4ADE80; }
+.title-esp32  { color: #38BDF8; }
+.title-flask  { color: #A78BFA; }
+.title-db     { color: #FBBF24; }
+.title-react  { color: #EC4899; }
+.title-user   { color: #818CF8; }
+
+.flow-card-desc {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.76rem;
+  color: #8B949E;
+  line-height: 1.6;
+}
+
+/* Número de paso (esquina superior derecha) */
+.flow-card-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: #30363D;
+  font-weight: 700;
+  position: absolute;
+  top: 1rem;
+  right: 1.1rem;
+}
+
+/* ── Flecha entre tarjetas ──────────────────────────────────────── */
+.flow-arrow {
+  width: 0;
+  height: 28px;
+  border-left: 2px solid #21262D;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+/* Punta de flecha */
+.flow-arrow::after {
+  content: '▼';
+  font-size: 0.55rem;
+  color: #30363D;
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* ── Sección de Entradas / Procesos / Salidas ───────────────────── */
+.eps-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.eps-card {
+  background: #161B22;
+  border: 1px solid #21262D;
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+/* Título con color de la captura */
+.eps-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.eps-title-entradas { color: #4ADE80; }
+.eps-title-procesos { color: #8B949E; }
+.eps-title-salidas  { color: #FBBF24; }
+
+/* Lista de ítems */
+.eps-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.eps-list li {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: #8B949E;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  line-height: 1.5;
+}
+
+/* Punto decorativo antes de cada ítem */
+.eps-list li::before {
+  content: '·';
+  color: #38BDF8;
+  font-size: 1.1rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────── */
+@media (max-width: 700px) {
+  .eps-grid { grid-template-columns: 1fr; }
+}

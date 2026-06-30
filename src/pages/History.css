@@ -1,0 +1,158 @@
+/* ================================================================
+   History.css — Estilos de la ruta /history
+   4 gráficos de línea (2x2) + tabla de últimas 12h
+   ================================================================ */
+
+/* ── Encabezado de sección + selector de período ────────────────── */
+.history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.history-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #8B949E;
+}
+
+/* Grupo de botones "Día / Semana / Año" */
+.period-tabs {
+  display: flex;
+  gap: 0.35rem;
+  background: #161B22;
+  border: 1px solid #21262D;
+  border-radius: 8px;
+  padding: 3px;
+}
+
+.period-tab {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  padding: 0.3rem 0.9rem;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  background: transparent;
+  color: #8B949E;
+  transition: all 0.15s;
+  font-weight: 500;
+}
+
+.period-tab:hover { color: #E6EDF3; }
+
+.period-tab.active {
+  background: #21262D;
+  color: #38BDF8;
+  border: 1px solid #30363D;
+}
+
+/* ── Grilla 2x2 de gráficos ──────────────────────────────────────── */
+.history-charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Panel individual de gráfico */
+.history-chart-panel {
+  background: #161B22;
+  border: 1px solid #21262D;
+  border-radius: 12px;
+  padding: 1.1rem 1.25rem 1rem;
+}
+
+.history-chart-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #8B949E;
+  margin-bottom: 0.75rem;
+}
+
+/* Contenedor del canvas */
+.history-chart-wrapper {
+  height: 220px;
+  position: relative;
+}
+
+/* ── Tabla de registros ───────────────────────────────────────────── */
+.history-table-panel {
+  background: #161B22;
+  border: 1px solid #21262D;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  overflow-x: auto;
+}
+
+.history-table-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #8B949E;
+  margin-bottom: 1.1rem;
+}
+
+/* Tabla */
+.reg-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82rem;
+}
+
+/* Encabezados */
+.reg-table th {
+  text-align: left;
+  padding: 0.6rem 1rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-bottom: 1px solid #21262D;
+  font-weight: 600;
+}
+
+/* Columnas con color por variable */
+.th-hora  { color: #8B949E; }
+.th-temp  { color: #FBBF24; }
+.th-hum   { color: #38BDF8; }
+.th-pres  { color: #A78BFA; }
+.th-lux   { color: #FDE68A; }
+
+/* Celdas */
+.reg-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #161B22;
+  color: #E6EDF3;
+}
+
+/* Alineación de columnas numéricas a la derecha */
+.reg-table td:not(:first-child),
+.reg-table th:not(:first-child) {
+  text-align: right;
+}
+
+/* Colores de cada celda de dato */
+.td-hora  { color: #38BDF8; }
+.td-temp  { color: #FBBF24; }
+.td-hum   { color: #38BDF8; }
+.td-pres  { color: #A78BFA; }
+.td-lux   { color: #FDE68A; }
+
+/* Hover en fila */
+.reg-table tbody tr:hover td {
+  background: #1C2333;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────── */
+@media (max-width: 800px) {
+  .history-charts-grid { grid-template-columns: 1fr; }
+}

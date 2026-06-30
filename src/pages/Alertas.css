@@ -1,0 +1,157 @@
+/* ================================================================
+   Alertas.css — Estilos de la ruta /alertas
+   Lista de alertas activas + tabla de umbrales configurados
+   ================================================================ */
+
+/* ── Encabezado ─────────────────────────────────────────────────── */
+.alertas-section-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8B949E;
+  margin-bottom: 1.2rem;
+}
+
+/* ── Lista de alertas activas ───────────────────────────────────── */
+.alertas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-bottom: 2rem;
+  background: #161B22;
+  border: 1px solid #21262D;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* Fila de alerta individual */
+.alerta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #1C2333;
+  gap: 1rem;
+  transition: background 0.15s;
+}
+
+.alerta-row:last-child { border-bottom: none; }
+.alerta-row:hover { background: #1C2333; }
+
+/* Grupo izquierdo: ícono + texto */
+.alerta-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.alerta-icono {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.alerta-texto {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+/* Hora de la alerta */
+.alerta-hora {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: #484F58;
+  flex-shrink: 0;
+}
+
+/* Colores por tipo de alerta */
+.alerta-warn   .alerta-texto { color: #FBBF24; }
+.alerta-info   .alerta-texto { color: #38BDF8; }
+.alerta-ok     .alerta-texto { color: #4ADE80; }
+.alerta-danger .alerta-texto { color: #F87171; }
+
+/* ── Panel de umbrales configurados ─────────────────────────────── */
+.umbrales-panel {
+  background: #161B22;
+  border: 1px solid #21262D;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+}
+
+.umbrales-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #8B949E;
+  margin-bottom: 1rem;
+}
+
+/* Fila de cada umbral */
+.umbral-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid #1C2333;
+  gap: 1rem;
+}
+
+.umbral-row:last-child { border-bottom: none; }
+
+/* Nombre del umbral */
+.umbral-nombre {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  color: #8B949E;
+  flex: 1;
+}
+
+/* Grupo derecho: valor + chip de estado */
+.umbral-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Valor del umbral */
+.umbral-valor {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82rem;
+  color: #E6EDF3;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Chip de estado: OK / ALERTA */
+.estado-chip {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  min-width: 58px;
+  text-align: center;
+}
+
+.estado-ok {
+  background: rgba(74,222,128,0.12);
+  color: #4ADE80;
+  border: 1px solid rgba(74,222,128,0.3);
+}
+
+.estado-alerta {
+  background: rgba(251,191,36,0.12);
+  color: #FBBF24;
+  border: 1px solid rgba(251,191,36,0.3);
+}
+
+.estado-danger {
+  background: rgba(248,113,113,0.12);
+  color: #F87171;
+  border: 1px solid rgba(248,113,113,0.3);
+}

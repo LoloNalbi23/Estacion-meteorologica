@@ -1,0 +1,164 @@
+/* ================================================================
+   index.css — Sistema de diseño global "sala de control"
+   Paleta oscura con azul eléctrico, verde OK, ámbar/rojo alerta
+   ================================================================ */
+
+/* ── Variables de diseño (tokens) ──────────────────────────────── */
+:root {
+  /* Colores de fondo */
+  --bg-base:    #0D1117;   /* fondo principal — casi negro */
+  --bg-card:    #161B22;   /* tarjetas y paneles */
+  --bg-surface: #1C2333;   /* superficie elevada dentro de tarjeta */
+  --bg-hover:   #21262D;   /* hover en filas, botones secundarios */
+
+  /* Acento principal */
+  --accent:       #38BDF8; /* azul eléctrico — identidad visual */
+  --accent-dim:   rgba(56, 189, 248, 0.12);
+  --accent-glow:  rgba(56, 189, 248, 0.35);
+
+  /* Colores de estado */
+  --ok:      #4ADE80;  /* verde — valor aceptable */
+  --warn:    #FBBF24;  /* ámbar — advertencia */
+  --danger:  #F87171;  /* rojo  — alerta crítica */
+  --info:    #818CF8;  /* índigo — información / presión */
+
+  /* Texto */
+  --text-primary:   #E6EDF3;
+  --text-secondary: #8B949E;
+  --text-muted:     #484F58;
+
+  /* Bordes */
+  --border:       #30363D;
+  --border-focus: #38BDF8;
+
+  /* Tipografía */
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', 'Courier New', monospace;
+
+  /* Espaciado base */
+  --radius-sm:  6px;
+  --radius-md:  12px;
+  --radius-lg:  18px;
+  --radius-xl:  24px;
+
+  /* Sombras */
+  --shadow-card: 0 4px 24px rgba(0,0,0,0.4);
+  --shadow-glow: 0 0 20px rgba(56,189,248,0.15);
+}
+
+/* ── Reset y base ────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-display);
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Scrollbar personalizada ─────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-card); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* ── Layout principal ────────────────────────────────────────────── */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Área de contenido debajo del navbar */
+.page-content {
+  flex: 1;
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ── Títulos de página ───────────────────────────────────────────── */
+.page-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.4rem;
+  letter-spacing: -0.02em;
+}
+
+.page-subtitle {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+}
+
+/* ── Tarjeta base ────────────────────────────────────────────────── */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-card);
+}
+
+/* ── Grilla responsive ───────────────────────────────────────────── */
+.grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.25rem; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; }
+
+@media (max-width: 900px) {
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .grid-3 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+  .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; }
+  .page-content { padding: 1rem; }
+}
+
+/* ── Chip de estado ──────────────────────────────────────────────── */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.7rem;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.chip-ok     { background: rgba(74,222,128,0.12); color: var(--ok); border: 1px solid rgba(74,222,128,0.3); }
+.chip-warn   { background: rgba(251,191,36,0.12);  color: var(--warn); border: 1px solid rgba(251,191,36,0.3); }
+.chip-danger { background: rgba(248,113,113,0.12); color: var(--danger); border: 1px solid rgba(248,113,113,0.3); }
+
+/* ── Punto parpadeante (live indicator) ──────────────────────────── */
+.live-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--ok);
+  border-radius: 50%;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.8); }
+}
+
+/* ── Valor numérico (mono) ───────────────────────────────────────── */
+.valor-num {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--text-primary);
+}
