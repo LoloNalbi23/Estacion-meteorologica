@@ -1,10 +1,4 @@
-// =============================================================
-// Dashboard.jsx — Ruta "/" (pantalla de inicio)
-// Muestra: 7 tarjetas de métricas en tiempo real +
-//          gráfico de línea de las últimas 24h con selector de variable
-// =============================================================
-
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Chart as ChartJS,
   CategoryScale, LinearScale, PointElement, LineElement,
@@ -12,24 +6,20 @@ import {
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
 
-// Datos mock — se reemplazarán por fetch() a Flask cuando esté lista la API
-import { datos12h, lecturaActual, formatHora } from '../data/mockData'
+// mockData sigue siendo necesario para el gráfico histórico
+import { datos12h, formatHora } from '../data/mockData'
+import { getLecturaActual } from '../data/Apiweather'
 import './Dashboard.css'
 
-// ── Registro de módulos de Chart.js necesarios ────────────────────
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend)
 
-// ── Configuración de colores por variable ─────────────────────────
-// Cada entrada define el color de línea y relleno del gráfico
 const VARIABLES = {
-  temperatura: { label: 'Temperatura',  color: '#FBBF24', unit: '°C',  key: 'temperatura' },
-  humedad:     { label: 'Humedad',      color: '#38BDF8', unit: '%',   key: 'humedad'     },
-  presion:     { label: 'Presión',      color: '#A78BFA', unit: ' hPa',key: 'presion'     },
-  luminosidad: { label: 'Luminosidad',  color: '#FDE68A', unit: ' lux',key: 'luminosidad' },
+  temperatura: { label: 'Temperatura', color: '#FBBF24', unit: '°C',   key: 'temperatura' },
+  humedad:     { label: 'Humedad',     color: '#38BDF8', unit: '%',    key: 'humedad'     },
+  presion:     { label: 'Presión',     color: '#A78BFA', unit: ' hPa', key: 'presion'     },
+  luminosidad: { label: 'Luminosidad', color: '#FDE68A', unit: ' lux', key: 'luminosidad' },
 }
 
-// ── Helper: calcula delta vs registro anterior ────────────────────
-// Devuelve { valor, tipo: 'up' | 'down' | 'same' }
 function calcDelta(actual, anterior, decimales = 1) {
   const diff = parseFloat((actual - anterior).toFixed(decimales))
   const tipo = diff > 0 ? 'up' : diff < 0 ? 'down' : 'same'
@@ -37,70 +27,69 @@ function calcDelta(actual, anterior, decimales = 1) {
   return { texto: `${signo}${diff}`, tipo }
 }
 
-// ── Sub-componente: tarjeta de una métrica ────────────────────────
+// Delta seguro: si falta el dato (ej. luminosidad = null), no explota
+function calcDeltaSeguro(actual, anterior, decimales = 1) {
+  if (actual == null || anterior == null) {
+    return { texto: '—', tipo: 'same' }
+  }
+  return calcDelta(actual, anterior, decimales)
+}
+
 function MetricCard({ label, valor, unidad, delta, unidadDelta, colorClass, icono }) {
-  // Flecha según tendencia
   const arrow = delta.tipo === 'up' ? '↑' : delta.tipo === 'down' ? '↓' : '→'
   const deltaClass = `metric-delta delta-${delta.tipo}`
-
   return (
     <div className="metric-card">
-      {/* Nombre de la variable + ícono */}
       <div className="metric-header">
         <span className="metric-label">{label}</span>
         <span className="metric-icon">{icono}</span>
       </div>
-
-      {/* Valor numérico grande */}
       <div className={`metric-value ${colorClass}`}>
-        {valor}
+        {valor != null ? valor : '—'}
         <span className="metric-unit">{unidad}</span>
       </div>
-
-      {/* Comparativa con la lectura de hace 1 hora */}
       <span className={deltaClass}>
-        {arrow} {delta.texto}{unidadDelta} vs hora anterior
+        {arrow} {delta.texto}{delta.tipo !== 'same' || delta.texto !== '—' ? unidadDelta : ''} vs hora anterior
       </span>
     </div>
   )
 }
 
-// ── Componente principal ──────────────────────────────────────────
 export default function Dashboard() {
-  // Variable seleccionada para el gráfico (por defecto: temperatura)
   const [varActiva, setVarActiva] = useState('temperatura')
+  const [lectura, setLectura] = useState(null)
 
-  // Lectura actual y penúltima (para calcular delta)
-  const actual    = lecturaActual
+  useEffect(() => {
+    getLecturaActual().then(setLectura)
+  }, [])
+
+  // ── El if va ANTES de usar lectura, pero DESPUÉS de los hooks ────
+  if (!lectura) return <p style={{ color: '#8B949E', padding: '2rem' }}>Cargando datos...</p>
+
+  // A partir de acá lectura está disponible
   const penultima = datos12h[datos12h.length - 2] || datos12h[0]
-
-  // ── Datos del gráfico: etiquetas (horas) + valores de la variable activa ──
-  // Genera datos con más puntos para que se vea suave como en la captura
-  const labels = datos12h.map(d => formatHora(d.timestamp))
   const config = VARIABLES[varActiva]
 
   const chartData = {
-    labels,
+    labels: datos12h.map(d => formatHora(d.timestamp)),
     datasets: [{
       label: config.label,
-      // Mapea el array de datos a los valores de la variable seleccionada
       data: datos12h.map(d => d[config.key]),
       borderColor: config.color,
-      backgroundColor: `${config.color}18`, // relleno semitransparente
+      backgroundColor: `${config.color}18`,
       borderWidth: 2,
-      pointRadius: 0,          // sin puntos — línea limpia
+      pointRadius: 0,
       pointHoverRadius: 4,
-      tension: 0.4,             // curva suave (0 = línea recta, 1 = muy curvo)
+      tension: 0.4,
       fill: true,
     }]
   }
 
-  // ── Opciones de Chart.js ──────────────────────────────────────────
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: { display: false }, // ocultamos la leyenda (el tab la reemplaza)
+      legend: { display: false },
       tooltip: {
         backgroundColor: '#1C2333',
         borderColor: '#30363D',
@@ -109,80 +98,55 @@ export default function Dashboard() {
         bodyColor: '#E6EDF3',
         bodyFont: { family: 'JetBrains Mono', size: 12 },
         titleFont: { family: 'JetBrains Mono', size: 11 },
-        callbacks: {
-          // Agrega la unidad al valor en el tooltip
-          label: (ctx) => ` ${ctx.parsed.y}${config.unit}`
-        }
+        callbacks: { label: (ctx) => ` ${ctx.parsed.y}${config.unit}` }
       }
     },
     scales: {
       x: {
-        // Eje X: horas
-        ticks: {
-          color: '#484F58',
-          font: { family: 'JetBrains Mono', size: 10 },
-          maxRotation: 0,
-          maxTicksLimit: 12,
-        },
-        grid: { color: '#21262D', drawBorder: false },
+        ticks: { color: '#484F58', font: { family: 'JetBrains Mono', size: 10 }, maxRotation: 0, maxTicksLimit: 12 },
+        grid: { color: '#21262D' },
       },
       y: {
-        // Eje Y: valores de la variable
-        ticks: {
-          color: '#484F58',
-          font: { family: 'JetBrains Mono', size: 10 },
-          padding: 8,
-        },
-        grid: { color: '#21262D', drawBorder: false },
+        ticks: { color: '#484F58', font: { family: 'JetBrains Mono', size: 10 }, padding: 8 },
+        grid: { color: '#21262D' },
         border: { dash: [4, 4] },
       }
     },
     interaction: { mode: 'index', intersect: false },
   }
 
-  // ── Datos para las 7 tarjetas ──────────────────────────────────────
   const tarjetas = [
-    // Fila 1 (4 columnas principales)
     {
-      label: 'TEMPERATURA', valor: actual.temperatura, unidad: ' °C',
-      delta: calcDelta(actual.temperatura, penultima.temperatura),
+      label: 'TEMPERATURA', valor: lectura.temperatura, unidad: ' °C',
+      delta: calcDeltaSeguro(lectura.temperatura, penultima.temperatura),
       unidadDelta: '°C', colorClass: 'color-temp', icono: '🌡️'
     },
     {
-      label: 'HUMEDAD', valor: actual.humedad, unidad: ' %',
-      delta: calcDelta(actual.humedad, penultima.humedad),
+      label: 'HUMEDAD', valor: lectura.humedad, unidad: ' %',
+      delta: calcDeltaSeguro(lectura.humedad, penultima.humedad),
       unidadDelta: '%', colorClass: 'color-hum', icono: '💧'
     },
     {
-      label: 'PRESIÓN ATM.', valor: actual.presion, unidad: ' hPa',
-      delta: calcDelta(actual.presion, penultima.presion),
+      label: 'PRESIÓN ATM.', valor: lectura.presion, unidad: ' hPa',
+      delta: calcDeltaSeguro(lectura.presion, penultima.presion),
       unidadDelta: ' hPa', colorClass: 'color-pres', icono: '🌀'
     },
     {
-      label: 'LUMINOSIDAD', valor: actual.luminosidad, unidad: ' lux',
-      delta: calcDelta(actual.luminosidad, penultima.luminosidad),
+      label: 'LUMINOSIDAD', valor: lectura.luminosidad, unidad: ' lux',
+      delta: calcDeltaSeguro(lectura.luminosidad, penultima.luminosidad),
       unidadDelta: ' lux', colorClass: 'color-lux', icono: '☀️'
     },
   ]
 
   return (
     <section>
-      {/* Título de sección en mayúsculas monoespaciado */}
       <h2 className="dash-section-title">Lectura en Tiempo Real</h2>
-
-      {/* ── Grilla de 4 tarjetas ── */}
       <div className="dash-metrics-grid">
-        {tarjetas.map(t => (
-          <MetricCard key={t.label} {...t} />
-        ))}
+        {tarjetas.map(t => <MetricCard key={t.label} {...t} />)}
       </div>
-
-      {/* ── Panel del gráfico de las últimas 24h ── */}
       <div className="dash-chart-panel">
         <div className="dash-chart-header">
           <span className="dash-chart-title">Últimas 24 Horas</span>
-
-          {/* Tabs para cambiar la variable graficada */}
           <div className="chart-tabs">
             {Object.entries(VARIABLES).map(([key, cfg]) => (
               <button
@@ -195,8 +159,6 @@ export default function Dashboard() {
             ))}
           </div>
         </div>
-
-        {/* Canvas de Chart.js envuelto para controlar altura */}
         <div className="dash-chart-wrapper">
           <Line data={chartData} options={chartOptions} />
         </div>
