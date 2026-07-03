@@ -6,9 +6,8 @@ import {
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
 
-// mockData sigue siendo necesario para el gráfico histórico
-import { datos12h, formatHora } from '../data/mockData'
-import { getLecturaActual } from '../data/Apiweather'
+import { formatHora } from '../data/mockData'
+import { getLecturaActual, getHistorial24h } from '../data/Apiweather'
 import './Dashboard.css'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend)
@@ -58,23 +57,27 @@ function MetricCard({ label, valor, unidad, delta, unidadDelta, colorClass, icon
 export default function Dashboard() {
   const [varActiva, setVarActiva] = useState('temperatura')
   const [lectura, setLectura] = useState(null)
+  const [historial, setHistorial] = useState([])
 
   useEffect(() => {
     getLecturaActual().then(setLectura)
+    getHistorial24h().then(setHistorial)
   }, [])
 
   // ── El if va ANTES de usar lectura, pero DESPUÉS de los hooks ────
-  if (!lectura) return <p style={{ color: '#8B949E', padding: '2rem' }}>Cargando datos...</p>
+  if (!lectura || historial.length === 0) return <p style={{ color: '#8B949E', padding: '2rem' }}>Cargando datos...</p>
 
-  // A partir de acá lectura está disponible
-  const penultima = datos12h[datos12h.length - 2] || datos12h[0]
+  // A partir de acá lectura e historial están disponibles.
+  // penultima = último registro guardado del historial (la hora más
+  // reciente ya "cerrada"); lectura = snapshot en vivo de ahora mismo.
+  const penultima = historial[historial.length - 1] || historial[0]
   const config = VARIABLES[varActiva]
 
   const chartData = {
-    labels: datos12h.map(d => formatHora(d.timestamp)),
+    labels: historial.map(d => formatHora(d.timestamp)),
     datasets: [{
       label: config.label,
-      data: datos12h.map(d => d[config.key]),
+      data: historial.map(d => d[config.key]),
       borderColor: config.color,
       backgroundColor: `${config.color}18`,
       borderWidth: 2,

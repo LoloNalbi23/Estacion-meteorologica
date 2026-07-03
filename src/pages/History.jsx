@@ -5,7 +5,7 @@
 //          + tabla con las últimas 12 lecturas horarias
 // =============================================================
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Chart as ChartJS,
   CategoryScale, LinearScale, PointElement, LineElement,
@@ -13,8 +13,12 @@ import {
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
 
-// Datos mock: 12h = día, 7d = semana, 12m = año
-import { datos12h, datos7d, datos12m, formatHora, formatFecha } from '../data/mockData'
+// Los 3 períodos usan datos reales — ver Apiweather.js:
+//  - Día:    OpenWeatherMap (lectura actual) + caminata anclada en localStorage
+//  - Semana: Open-Meteo Forecast API (past_days=7)
+//  - Año:    Open-Meteo Archive API (reanálisis ERA5, promedio mensual)
+import { formatHora, formatFecha } from '../data/mockData'
+import { getHistorial24h, getHistorialSemana, getHistorialAnio } from '../data/Apiweather'
 import './History.css'
 
 // Registro de módulos Chart.js (solo necesario una vez en la app,
@@ -108,27 +112,79 @@ export default function History() {
   // Período seleccionado: '1d' | '7d' | '12m'
   const [periodo, setPeriodo] = useState('1d')
 
+  // Historial de las últimas 24h, anclado a la lectura real (se necesita
+  // siempre, no solo cuando periodo === '1d', porque la tabla de abajo
+  // lo muestra sin importar qué tab esté activa)
+  const [historial24h, setHistorial24h] = useState([])
+  const [cargando, setCargando] = useState(true)
+
+  // Semana y Año se piden a Open-Meteo la primera vez que se abre esa
+  // pestaña (lazy) y quedan en memoria — no hace falta re-pedirlos cada
+  // vez que el usuario cambia de tab dentro de la misma visita.
+  const [historialSemana, setHistorialSemana] = useState([])
+  const [historialAnio, setHistorialAnio] = useState([])
+  const [cargandoPeriodo, setCargandoPeriodo] = useState(false)
+  const [errorPeriodo, setErrorPeriodo] = useState(null)
+
+  useEffect(() => {
+    getHistorial24h().then(h => {
+      setHistorial24h(h)
+      setCargando(false)
+    })
+  }, [])
+
+  useEffect(() => {
+    if (periodo === '7d' && historialSemana.length === 0) {
+      setErrorPeriodo(null)
+      setCargandoPeriodo(true)
+      getHistorialSemana()
+        .then(setHistorialSemana)
+        .catch(() => setErrorPeriodo('No se pudo obtener el historial semanal (Open-Meteo).'))
+        .finally(() => setCargandoPeriodo(false))
+    }
+    if (periodo === '12m' && historialAnio.length === 0) {
+      setErrorPeriodo(null)
+      setCargandoPeriodo(true)
+      getHistorialAnio()
+        .then(setHistorialAnio)
+        .catch(() => setErrorPeriodo('No se pudo obtener el historial anual (Open-Meteo).'))
+        .finally(() => setCargandoPeriodo(false))
+    }
+  }, [periodo]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Selección de datos y etiquetas según el período ──────────────
-  // Cuando Flask esté listo, acá harías un fetch diferente por período
   const { datos, labels } = (() => {
     if (periodo === '7d') {
       return {
-        datos: datos7d,
-        labels: datos7d.map(d => formatFecha(d.timestamp))
+        datos: historialSemana,
+        labels: historialSemana.map(d => formatFecha(d.timestamp))
       }
     }
     if (periodo === '12m') {
       return {
-        datos: datos12m,
-        labels: datos12m.map(d => d.label) // "Ene", "Feb", etc.
+        datos: historialAnio,
+        labels: historialAnio.map(d => d.label) // "Ene", "Feb", etc.
       }
     }
-    // Por defecto: últimas 12h (un punto por hora)
+    // Por defecto: últimas 24h (un punto por hora)
     return {
-      datos: datos12h,
-      labels: datos12h.map(d => formatHora(d.timestamp))
+      datos: historial24h,
+      labels: historial24h.map(d => formatHora(d.timestamp))
     }
   })()
+
+  if (cargando) {
+    return <p style={{ color: '#8B949E', padding: '2rem' }}>Cargando datos...</p>
+  }
+
+  // Semana/Año todavía no llegaron (o fallaron) → mostrar estado en vez
+  // de gráficos vacíos
+  if (periodo !== '1d' && cargandoPeriodo) {
+    return <p style={{ color: '#8B949E', padding: '2rem' }}>Consultando historial real en Open-Meteo...</p>
+  }
+  if (periodo !== '1d' && errorPeriodo) {
+    return <p style={{ color: '#F87171', padding: '2rem' }}>{errorPeriodo}</p>
+  }
 
   // Título dinámico según período
   const tituloSeccion = {
@@ -174,7 +230,8 @@ export default function History() {
       </div>
 
       {/* ── Tabla de registros de las últimas 12 horas ── */}
-      {/* Siempre muestra datos12h independientemente del período */}
+      {/* Siempre muestra historial24h (las últimas 12 de las 24h ancladas),
+          independientemente del período elegido en los tabs */}
       <div className="history-table-panel">
         <p className="history-table-title">Tabla de Registros</p>
 
@@ -190,7 +247,7 @@ export default function History() {
           </thead>
           <tbody>
             {/* 12 filas — una por hora, en orden descendente (más reciente arriba) */}
-            {[...datos12h].reverse().map((reg, i) => (
+            {[...historial24h].slice(-12).reverse().map((reg, i) => (
               <tr key={i}>
                 <td className="td-hora">{formatHora(reg.timestamp)}</td>
                 <td className="td-temp">{reg.temperatura}</td>

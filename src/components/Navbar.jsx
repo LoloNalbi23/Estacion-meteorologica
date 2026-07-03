@@ -62,18 +62,29 @@ const IconRefresh = () => (
 
 // ── Componente principal ──────────────────────────────────────────
 export default function Navbar() {
-  // Estado para mostrar la hora actualizada cada segundo
-  const [hora, setHora] = useState(new Date())
+  // Redondea "hacia abajo" a la hora en punto (minutos y segundos a 0),
+  // mismo criterio que usa el historial en Apiweather.js — así "Última
+  // actualización" siempre muestra algo prolijo como 14:00, nunca 14:33.
+  const redondearHora = (fecha) => {
+    const d = new Date(fecha)
+    d.setMinutes(0, 0, 0)
+    return d
+  }
 
-  // Actualiza el reloj cada segundo (simula "última actualización")
+  // Estado para la hora en punto mostrada
+  const [hora, setHora] = useState(redondearHora(new Date()))
+
+  // No hace falta re-chequear cada segundo si igual se muestra
+  // redondeado a la hora — con revisar cada minuto alcanza para
+  // detectar el cambio de hora en punto.
   useEffect(() => {
-    const timer = setInterval(() => setHora(new Date()), 1000)
+    const timer = setInterval(() => setHora(redondearHora(new Date())), 60 * 1000)
     return () => clearInterval(timer) // limpia al desmontar
   }, [])
 
-  // Formatea la hora como "HH:MM:SS"
+  // Formatea la hora como "HH:MM" (siempre en punto, sin segundos)
   const horaStr = hora.toLocaleTimeString('es-AR', {
-    hour: '2-digit', minute: '2-digit', second: '2-digit'
+    hour: '2-digit', minute: '2-digit'
   })
 
   return (
@@ -96,7 +107,7 @@ export default function Navbar() {
           <span className="status-dot" />
           <span className="status-online">En línea</span>
           <span className="status-time">Última actualización: {horaStr}</span>
-          <button className="btn-refresh" title="Actualizar datos" onClick={() => setHora(new Date())}>
+          <button className="btn-refresh" title="Actualizar datos" onClick={() => setHora(redondearHora(new Date()))}>
             <IconRefresh />
           </button>
         </div>
