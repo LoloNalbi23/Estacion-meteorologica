@@ -35,3 +35,7 @@ instance/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Claves de Firebase Admin
+secrets/
+*firebase-adminsdk*.json
