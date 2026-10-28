@@ -9,6 +9,7 @@ import Dashboard from './pages/Dashboard'
 import History   from './pages/History'
 import Proyecto  from './pages/Proyecto'
 import Alertas   from './pages/Alertas'
+import Lecturas from './Lecturas'
 
 export default function App() {
   return (
@@ -30,6 +31,8 @@ export default function App() {
 
           {/* Ruta 4: Alertas — alertas activas + umbrales */}
           <Route path="/alertas"  element={<Alertas />} />
+
+          <Route path="/Lecturas"  element={<Lecturas />} />
         </Routes>
       </main>
     </div>

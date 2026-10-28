@@ -10,6 +10,8 @@
     "simulador": "node --env-file=.env scripts/simulador.mjs"
   },
   "dependencies": {
+    "@supabase/server": "^1.9.2",
+    "@supabase/supabase-js": "^2.118.0",
     "chart.js": "^4.4.3",
     "firebase": "^13.1.0",
     "react": "^18.3.1",

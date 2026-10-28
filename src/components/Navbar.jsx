@@ -7,6 +7,7 @@
 import { NavLink } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import './Navbar.css'
+import { insertarLecturaPrueba } from '../prueba.js'
 
 // ── Íconos SVG inline (sin dependencia extra) ─────────────────────
 
@@ -128,6 +129,10 @@ export default function Navbar() {
         <NavLink to="/alertas"     className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}>
           <IconAlert /> Alertas
         </NavLink>
+        <NavLink to="/lecturas"     className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}>
+          <IconAlert /> Lecturas
+        </NavLink>
+        <button onClick={insertarLecturaPrueba}>Insertar prueba</button>
       </nav>
     </header>
   )
