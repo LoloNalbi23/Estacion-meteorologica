@@ -11,6 +11,7 @@
 import {
   collection, query, orderBy, limit, where,
   getDocs, onSnapshot, Timestamp,
+  getAggregateFromServer, average, count,
 } from 'firebase/firestore'
 import { db } from '../firebase'
 
@@ -49,6 +50,8 @@ export async function getLecturaActual() {
 
 // Escucha en TIEMPO REAL la última lectura: llama a callback(lectura) al
 // empezar y cada vez que el sensor guarda una nueva.
+// Si todavía no hay ninguna lectura guardada, llama a callback(null), para
+// que la página pueda avisarlo en vez de quedarse cargando para siempre.
 // Devuelve una función para dejar de escuchar (usarla al desmontar el
 // componente, en el return del useEffect).
 export function escucharLecturaActual(callback, onError) {
@@ -60,7 +63,7 @@ export function escucharLecturaActual(callback, onError) {
   return onSnapshot(
     q,
     (snap) => {
-      if (!snap.empty) callback(convertir(snap.docs[0]))
+      callback(snap.empty ? null : convertir(snap.docs[0]))
     },
     (error) => {
       console.error('Error escuchando la lectura actual:', error)
@@ -83,6 +86,101 @@ export async function getHistorial24h() {
   )
   const snap = await getDocs(q)
   return snap.docs.map(convertir).reverse()
+}
+
+// ── Promedios por período (semana y año) ──────────────────────────
+//
+// Se calculan EN EL SERVIDOR de Firestore con consultas de agregación:
+// no se descargan las lecturas, solo llega el promedio. Eso cuesta muy pocas
+// lecturas de la cuota gratuita (Firestore cobra 1 lectura por cada 1.000
+// registros revisados).
+//
+// Si un día o un mes NO tiene lecturas guardadas, simplemente se omite:
+// nunca se inventan ni se rellenan datos. Si no hay nada en todo el
+// período, la función devuelve [] y la página muestra un aviso.
+//
+// La primera vez, Firestore puede pedir crear un ÍNDICE COMPUESTO: el error
+// que aparece en la consola del navegador (F12) trae un link. Hay que
+// tocarlo, crear el índice, esperar unos minutos y recargar.
+
+const redondear = (n, decimales) => Number(n.toFixed(decimales))
+
+// Promedio de cada variable entre 'inicio' (incluido) y 'fin' (excluido).
+// Devuelve null si en ese rango no hay ninguna lectura.
+async function promediarRango(inicio, fin) {
+  const q = query(
+    collection(db, 'lecturas'),
+    where('timestamp', '>=', Timestamp.fromDate(inicio)),
+    where('timestamp', '<', Timestamp.fromDate(fin))
+  )
+  const snap = await getAggregateFromServer(q, {
+    muestras: count(),
+    temperatura: average('temperatura'),
+    humedad: average('humedad'),
+    presion: average('presion'),
+    luminosidad: average('luminosidad'),
+  })
+  const d = snap.data()
+  if (!d.muestras || d.temperatura == null) return null
+  return {
+    muestras: d.muestras,
+    temperatura: redondear(d.temperatura, 1),
+    humedad: redondear(d.humedad, 1),
+    presion: redondear(d.presion, 1),
+    luminosidad: Math.round(d.luminosidad),
+  }
+}
+
+// Un punto por día de los últimos 7 días (hoy incluido), del más viejo al
+// más nuevo. Los días sin lecturas no aparecen.
+// Cada punto: { timestamp: Date (inicio del día), temperatura, humedad,
+//               presion, luminosidad, muestras }
+export async function getHistorialSemana() {
+  const hoy = new Date()
+  const rangos = []
+  for (let i = 6; i >= 0; i--) {
+    rangos.push({
+      inicio: new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - i),
+      fin: new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - i + 1),
+    })
+  }
+  const resultados = await Promise.all(
+    rangos.map((r) => promediarRango(r.inicio, r.fin))
+  )
+  return resultados
+    .map((res, i) => (res ? { timestamp: rangos[i].inicio, ...res } : null))
+    .filter(Boolean)
+}
+
+const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+
+// Un punto por mes de los últimos 12 meses (el actual incluido), del más
+// viejo al más nuevo. Los meses sin lecturas no aparecen.
+// Cada punto: { timestamp: Date (inicio del mes), label: 'Ene', temperatura,
+//               humedad, presion, luminosidad, muestras }
+export async function getHistorialAnio() {
+  const hoy = new Date()
+  const rangos = []
+  for (let i = 11; i >= 0; i--) {
+    rangos.push({
+      inicio: new Date(hoy.getFullYear(), hoy.getMonth() - i, 1),
+      fin: new Date(hoy.getFullYear(), hoy.getMonth() - i + 1, 1),
+    })
+  }
+  const resultados = await Promise.all(
+    rangos.map((r) => promediarRango(r.inicio, r.fin))
+  )
+  return resultados
+    .map((res, i) =>
+      res
+        ? {
+            timestamp: rangos[i].inicio,
+            label: MESES[rangos[i].inicio.getMonth()],
+            ...res,
+          }
+        : null
+    )
+    .filter(Boolean)
 }
 
 // Umbrales configurados, como objeto { temperatura: { min, max }, ... }
