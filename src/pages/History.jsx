@@ -2,7 +2,13 @@
 // History.jsx — Ruta "/history"
 // Muestra: 4 gráficos de línea (temperatura, humedad, presión, lux)
 //          con selector Día / Semana / Año,
-//          + tabla con las últimas 12 lecturas horarias
+//          + tabla con las últimas 12 lecturas
+//
+// TODOS los datos salen de Firebase (Firestore). Si no hay datos para el
+// período elegido, se muestra un aviso: nunca se inventan ni se rellenan.
+//  - Día:    lecturas de las últimas 24 h
+//  - Semana: promedio por día de los últimos 7 días
+//  - Año:    promedio por mes de los últimos 12 meses
 // =============================================================
 
 import { useState, useEffect } from 'react'
@@ -13,12 +19,8 @@ import {
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
 
-// Los 3 períodos usan datos reales — ver Apiweather.js:
-//  - Día:    OpenWeatherMap (lectura actual) + caminata anclada en localStorage
-//  - Semana: Open-Meteo Forecast API (past_days=7)
-//  - Año:    Open-Meteo Archive API (reanálisis ERA5, promedio mensual)
 import { formatHora, formatFecha } from '../data/mockData'
-import { getHistorial24h, getHistorialSemana, getHistorialAnio } from '../data/Apiweather'
+import { getHistorial24h, getHistorialSemana, getHistorialAnio } from '../data/firebaseService'
 import './History.css'
 
 // Registro de módulos Chart.js (solo necesario una vez en la app,
@@ -33,6 +35,23 @@ const GRAFICOS = [
   { key: 'presion',     label: 'PRESIÓN',     color: '#A78BFA', unit: ' hPa'},
   { key: 'luminosidad', label: 'LUMINOSIDAD', color: '#FDE68A', unit: ' lux'},
 ]
+
+// ── Mensajes ──────────────────────────────────────────────────────
+const MSG_VACIO = {
+  '1d':  'No hay lecturas de las últimas 24 horas en la base de datos. Cuando el sensor (o el simulador) guarde datos, van a aparecer acá.',
+  '7d':  'No hay datos de la última semana en la base de datos todavía.',
+  '12m': 'No hay datos del último año en la base de datos todavía.',
+}
+
+const MSG_ERROR =
+  'No se pudo consultar la base de datos. Abrí la consola del navegador (F12) para ver el detalle. ' +
+  'Si el error menciona un índice, tocá el link que trae para crearlo, esperá unos minutos y recargá.'
+
+// Cuántos puntos tendría el gráfico si hubiera datos de todo el período
+const ESPERADOS = {
+  '7d':  { cantidad: 7,  unidad: 'días' },
+  '12m': { cantidad: 12, unidad: 'meses' },
+}
 
 // ── Opciones comunes de Chart.js para todos los gráficos ─────────
 // Recibe el color de la variable para personalizar el tooltip
@@ -107,84 +126,86 @@ function ChartPanel({ config, labels, datos }) {
   )
 }
 
+// ── Sub-componente: cartel de estado (cargando / aviso / error) ───
+function Aviso({ tipo = 'info', children }) {
+  const colores = { info: '#8B949E', aviso: '#FBBF24', error: '#F87171' }
+  const color = colores[tipo]
+  return (
+    <div style={{
+      color,
+      background: '#1C2333',
+      border: `1px solid ${color}55`,
+      borderRadius: '8px',
+      padding: '1rem 1.25rem',
+      margin: '1rem 0',
+    }}>
+      {children}
+    </div>
+  )
+}
+
 // ── Componente principal ──────────────────────────────────────────
 export default function History() {
   // Período seleccionado: '1d' | '7d' | '12m'
   const [periodo, setPeriodo] = useState('1d')
 
-  // Historial de las últimas 24h, anclado a la lectura real (se necesita
-  // siempre, no solo cuando periodo === '1d', porque la tabla de abajo
-  // lo muestra sin importar qué tab esté activa)
-  const [historial24h, setHistorial24h] = useState([])
-  const [cargando, setCargando] = useState(true)
+  // Para cada período:  null = todavía no se pidió
+  //                     []   = se pidió y no hay datos
+  // El historial de 24 h se necesita siempre: la tabla de abajo lo muestra
+  // sin importar qué pestaña esté activa.
+  const [historial24h, setHistorial24h] = useState(null)
+  const [historialSemana, setHistorialSemana] = useState(null)
+  const [historialAnio, setHistorialAnio] = useState(null)
 
-  // Semana y Año se piden a Open-Meteo la primera vez que se abre esa
-  // pestaña (lazy) y quedan en memoria — no hace falta re-pedirlos cada
-  // vez que el usuario cambia de tab dentro de la misma visita.
-  const [historialSemana, setHistorialSemana] = useState([])
-  const [historialAnio, setHistorialAnio] = useState([])
-  const [cargandoPeriodo, setCargandoPeriodo] = useState(false)
-  const [errorPeriodo, setErrorPeriodo] = useState(null)
+  // Error por período, para poder reintentar al volver a la pestaña
+  const [errores, setErrores] = useState({})
 
+  // Pide un período a Firebase y guarda el resultado (o el error)
+  function cargar(clave, pedir, guardar) {
+    setErrores((prev) => ({ ...prev, [clave]: null }))
+    pedir()
+      .then(guardar)
+      .catch((e) => {
+        console.error(`Error cargando el período ${clave}:`, e)
+        setErrores((prev) => ({ ...prev, [clave]: MSG_ERROR }))
+      })
+  }
+
+  // Día: se pide al entrar a la página
   useEffect(() => {
-    getHistorial24h().then(h => {
-      setHistorial24h(h)
-      setCargando(false)
-    })
-  }, [])
+    cargar('1d', getHistorial24h, setHistorial24h)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Semana y Año: se piden la primera vez que se abre la pestaña (lazy)
+  // y quedan en memoria mientras dure la visita.
   useEffect(() => {
-    if (periodo === '7d' && historialSemana.length === 0) {
-      setErrorPeriodo(null)
-      setCargandoPeriodo(true)
-      getHistorialSemana()
-        .then(setHistorialSemana)
-        .catch(() => setErrorPeriodo('No se pudo obtener el historial semanal (Open-Meteo).'))
-        .finally(() => setCargandoPeriodo(false))
+    if (periodo === '7d' && historialSemana === null) {
+      cargar('7d', getHistorialSemana, setHistorialSemana)
     }
-    if (periodo === '12m' && historialAnio.length === 0) {
-      setErrorPeriodo(null)
-      setCargandoPeriodo(true)
-      getHistorialAnio()
-        .then(setHistorialAnio)
-        .catch(() => setErrorPeriodo('No se pudo obtener el historial anual (Open-Meteo).'))
-        .finally(() => setCargandoPeriodo(false))
+    if (periodo === '12m' && historialAnio === null) {
+      cargar('12m', getHistorialAnio, setHistorialAnio)
     }
   }, [periodo]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Selección de datos y etiquetas según el período ──────────────
-  const { datos, labels } = (() => {
-    if (periodo === '7d') {
-      return {
-        datos: historialSemana,
-        labels: historialSemana.map(d => formatFecha(d.timestamp))
-      }
-    }
-    if (periodo === '12m') {
-      return {
-        datos: historialAnio,
-        labels: historialAnio.map(d => d.label) // "Ene", "Feb", etc.
-      }
-    }
-    // Por defecto: últimas 24h (un punto por hora)
-    return {
-      datos: historial24h,
-      labels: historial24h.map(d => formatHora(d.timestamp))
-    }
+  // ── Datos y estado del período activo ────────────────────────────
+  const datosPeriodo = {
+    '1d': historial24h,
+    '7d': historialSemana,
+    '12m': historialAnio,
+  }[periodo]
+  const error = errores[periodo]
+  const cargandoActual = datosPeriodo === null && !error
+  const datos = datosPeriodo ?? []
+
+  const labels = (() => {
+    if (periodo === '7d')  return datos.map(d => formatFecha(d.timestamp))
+    if (periodo === '12m') return datos.map(d => d.label) // "Ene", "Feb", etc.
+    return datos.map(d => formatHora(d.timestamp))        // últimas 24 h
   })()
 
-  if (cargando) {
-    return <p style={{ color: '#8B949E', padding: '2rem' }}>Cargando datos...</p>
-  }
-
-  // Semana/Año todavía no llegaron (o fallaron) → mostrar estado en vez
-  // de gráficos vacíos
-  if (periodo !== '1d' && cargandoPeriodo) {
-    return <p style={{ color: '#8B949E', padding: '2rem' }}>Consultando historial real en Open-Meteo...</p>
-  }
-  if (periodo !== '1d' && errorPeriodo) {
-    return <p style={{ color: '#F87171', padding: '2rem' }}>{errorPeriodo}</p>
-  }
+  // Si hay datos pero de menos días/meses de los esperados, se avisa
+  const esperado = ESPERADOS[periodo]
+  const esParcial = esperado && datos.length > 0 && datos.length < esperado.cantidad
 
   // Título dinámico según período
   const tituloSeccion = {
@@ -192,6 +213,39 @@ export default function History() {
     '7d':  'DATOS HISTÓRICOS — ÚLTIMA SEMANA',
     '12m': 'DATOS HISTÓRICOS — ÚLTIMO AÑO',
   }[periodo]
+
+  // ── Cuerpo según el estado: error, cargando, vacío o con datos ───
+  let cuerpo
+  if (error) {
+    cuerpo = <Aviso tipo="error">{error}</Aviso>
+  } else if (cargandoActual) {
+    cuerpo = <Aviso>Cargando datos desde la base de datos...</Aviso>
+  } else if (datos.length === 0) {
+    cuerpo = <Aviso tipo="aviso">{MSG_VACIO[periodo]}</Aviso>
+  } else {
+    cuerpo = (
+      <>
+        {esParcial && (
+          <Aviso tipo="aviso">
+            Hay datos de {datos.length} de los últimos {esperado.cantidad} {esperado.unidad}.
+            Los períodos sin lecturas no se muestran.
+          </Aviso>
+        )}
+
+        {/* ── Grilla 2x2 de gráficos de línea ── */}
+        <div className="history-charts-grid">
+          {GRAFICOS.map(cfg => (
+            <ChartPanel
+              key={cfg.key}
+              config={cfg}
+              labels={labels}
+              datos={datos}
+            />
+          ))}
+        </div>
+      </>
+    )
+  }
 
   return (
     <section>
@@ -217,48 +271,42 @@ export default function History() {
         </div>
       </div>
 
-      {/* ── Grilla 2x2 de gráficos de línea ── */}
-      <div className="history-charts-grid">
-        {GRAFICOS.map(cfg => (
-          <ChartPanel
-            key={cfg.key}
-            config={cfg}
-            labels={labels}
-            datos={datos}
-          />
-        ))}
-      </div>
+      {cuerpo}
 
-      {/* ── Tabla de registros de las últimas 12 horas ── */}
-      {/* Siempre muestra historial24h (las últimas 12 de las 24h ancladas),
-          independientemente del período elegido en los tabs */}
-      <div className="history-table-panel">
-        <p className="history-table-title">Tabla de Registros</p>
+      {/* ── Tabla con las últimas 12 lecturas guardadas ── */}
+      {/* Muestra historial24h, independientemente del período elegido en
+          los tabs. Solo se ve cuando el período activo tiene datos: si hay
+          un cartel (cargando, error o sin datos), la tabla se oculta. */}
+      {!error && !cargandoActual && datos.length > 0 &&
+        historial24h && historial24h.length > 0 && (
+        <div className="history-table-panel">
+          <p className="history-table-title">Tabla de Registros</p>
 
-        <table className="reg-table">
-          <thead>
-            <tr>
-              <th className="th-hora">Hora</th>
-              <th className="th-temp">Temp (°C)</th>
-              <th className="th-hum">Humedad (%)</th>
-              <th className="th-pres">Presión (hPa)</th>
-              <th className="th-lux">Lux</th>
-            </tr>
-          </thead>
-          <tbody>
-            {/* 12 filas — una por hora, en orden descendente (más reciente arriba) */}
-            {[...historial24h].slice(-12).reverse().map((reg, i) => (
-              <tr key={i}>
-                <td className="td-hora">{formatHora(reg.timestamp)}</td>
-                <td className="td-temp">{reg.temperatura}</td>
-                <td className="td-hum">{reg.humedad}</td>
-                <td className="td-pres">{reg.presion}</td>
-                <td className="td-lux">{reg.luminosidad.toLocaleString('es-AR')}</td>
+          <table className="reg-table">
+            <thead>
+              <tr>
+                <th className="th-hora">Hora</th>
+                <th className="th-temp">Temp (°C)</th>
+                <th className="th-hum">Humedad (%)</th>
+                <th className="th-pres">Presión (hPa)</th>
+                <th className="th-lux">Lux</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {/* Últimas 12 lecturas, la más reciente arriba */}
+              {[...historial24h].slice(-12).reverse().map((reg, i) => (
+                <tr key={i}>
+                  <td className="td-hora">{formatHora(reg.timestamp)}</td>
+                  <td className="td-temp">{reg.temperatura}</td>
+                  <td className="td-hum">{reg.humedad}</td>
+                  <td className="td-pres">{reg.presion}</td>
+                  <td className="td-lux">{reg.luminosidad.toLocaleString('es-AR')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </section>
   )
 }
