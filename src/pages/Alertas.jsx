@@ -1,14 +1,29 @@
 // =============================================================
 // Alertas.jsx — Ruta "/alertas"
-// Muestra: lista de alertas activas generadas comparando la lectura
-//          REAL actual contra los umbrales configurados,
+// Muestra: lista de alertas activas generadas comparando la última
+//          lectura REAL de la base de datos (Firebase) contra los
+//          umbrales configurados,
 //          + tabla de umbrales con su estado (OK / ALERTA)
+//
+// La pantalla se actualiza sola cuando el sensor guarda una lectura nueva.
+// Si todavía no hay lecturas, se muestra un aviso: nunca se inventan datos.
 // =============================================================
 
 import { useState, useEffect } from 'react'
 import { formatHora } from '../data/mockData'
-import { getLecturaActual } from '../data/Apiweather'
+import { escucharLecturaActual } from '../data/firebaseService'
 import './Alertas.css'
+
+// Si la última lectura tiene más minutos que esto, se avisa que los
+// valores pueden no reflejar el estado actual (sensor apagado, sin WiFi...)
+const LECTURA_VIEJA_MIN = 60
+
+const MSG_SIN_DATOS =
+  'Todavía no hay lecturas en la base de datos, así que no se pueden evaluar las alertas. ' +
+  'Cuando el sensor (o el simulador) guarde datos, van a aparecer acá.'
+
+const MSG_ERROR =
+  'No se pudo consultar la base de datos. Abrí la consola del navegador (F12) para ver el detalle.'
 
 // ── Umbrales configurados ──────────────────────────────────────────
 // Cada entrada define nombre, valor límite, variable a comparar,
@@ -95,13 +110,22 @@ function estaEnAlerta(umbral, lectura) {
   return umbral.op === '>' ? val > umbral.limite : val < umbral.limite
 }
 
+// ── Helper: "hace 5 min", "hace 2 h", "hace 3 días" ───────────────
+function textoHace(fecha) {
+  if (!fecha) return ''
+  const min = Math.round((Date.now() - fecha.getTime()) / 60000)
+  if (min < 1) return 'hace instantes'
+  if (min < 60) return `hace ${min} min`
+  const horas = Math.round(min / 60)
+  if (horas < 24) return `hace ${horas} h`
+  return `hace ${Math.round(horas / 24)} días`
+}
+
 // ── Alertas: recorre TODOS los umbrales configurados contra la
-// lectura real, y arma la lista dinámicamente. Antes esto estaba
-// hardcodeado a mano y le faltaban casos (presión alta, luminosidad
-// alta nunca se chequeaban) — ahora cubre exactamente lo que dice la
-// tabla de umbrales de abajo, ni más ni menos.
+// última lectura real, y arma la lista dinámicamente. La hora que se
+// muestra en cada fila es la de la lectura, no la de ahora.
 function generarAlertas(lectura) {
-  const ahora = new Date()
+  const hora = lectura.timestamp ? formatHora(lectura.timestamp) : '—'
 
   const alertas = UMBRALES_CONFIG
     .filter(u => estaEnAlerta(u, lectura))
@@ -109,7 +133,7 @@ function generarAlertas(lectura) {
       tipo:  u.tipo,
       icono: u.icono,
       texto: u.mensaje(lectura[u.variable]),
-      hora:  formatHora(ahora),
+      hora,
     }))
 
   // Si ningún umbral está superado, se muestra un solo "todo OK"
@@ -118,7 +142,7 @@ function generarAlertas(lectura) {
       tipo:  'ok',
       icono: '✅',
       texto: 'Todos los valores dentro del rango normal para la estación',
-      hora:  formatHora(ahora),
+      hora,
     })
   }
 
@@ -126,35 +150,90 @@ function generarAlertas(lectura) {
   alertas.push({
     tipo:  'info',
     icono: 'ℹ️',
-    texto: 'Sistema de monitoreo activo — la lectura se actualiza en cada visita',
-    hora:  formatHora(ahora),
+    texto: 'Monitoreo en tiempo real — la pantalla se actualiza cuando llega una lectura nueva',
+    hora,
   })
 
   return alertas
 }
 
+// ── Sub-componente: cartel de estado (cargando / aviso / error) ───
+function Aviso({ tipo = 'info', children }) {
+  const colores = { info: '#8B949E', aviso: '#FBBF24', error: '#F87171' }
+  const color = colores[tipo]
+  return (
+    <div style={{
+      color,
+      background: '#1C2333',
+      border: `1px solid ${color}55`,
+      borderRadius: '8px',
+      padding: '1rem 1.25rem',
+      margin: '1rem 0',
+    }}>
+      {children}
+    </div>
+  )
+}
+
 // ── Componente principal ──────────────────────────────────────────
 export default function Alertas() {
-  // Antes esta pantalla usaba lecturaActual de mockData.js — un valor
-  // congelado, generado una sola vez con Math.random() al cargar el
-  // módulo, que nunca cambiaba. Por eso siempre daba "todo OK" pase lo
-  // que pase. Ahora usa la lectura real de la estación (misma función
-  // que Dashboard).
-  const [lectura, setLectura] = useState(null)
+  // Estados posibles de la lectura:
+  //   undefined → todavía está cargando
+  //   null      → se consultó y no hay ninguna lectura guardada
+  //   objeto    → la última lectura
+  const [lectura, setLectura] = useState(undefined)
+  const [error, setError] = useState(null)
 
+  // Escucha en tiempo real: se suscribe al montar la página y se desuscribe
+  // al salir (el return del useEffect).
   useEffect(() => {
-    getLecturaActual().then(setLectura)
+    const dejarDeEscuchar = escucharLecturaActual(
+      (l) => {
+        setError(null)
+        setLectura(l)
+      },
+      () => setError(MSG_ERROR)
+    )
+    return () => dejarDeEscuchar()
   }, [])
 
-  if (!lectura) {
-    return <p style={{ color: '#8B949E', padding: '2rem' }}>Cargando datos...</p>
+  // ── Cartel según el estado: error, cargando o sin datos ─────────
+  if (error || lectura === undefined || lectura === null) {
+    let cartel
+    if (error) {
+      cartel = <Aviso tipo="error">{error}</Aviso>
+    } else if (lectura === undefined) {
+      cartel = <Aviso>Cargando datos desde la base de datos...</Aviso>
+    } else {
+      cartel = <Aviso tipo="aviso">{MSG_SIN_DATOS}</Aviso>
+    }
+    return (
+      <section>
+        <h2 className="alertas-section-title">Alertas del Sistema</h2>
+        {cartel}
+      </section>
+    )
   }
 
+  // ── Hay lectura: se evalúan los umbrales ────────────────────────
   const alertas = generarAlertas(lectura)
+
+  const minutosDesdeLectura = lectura.timestamp
+    ? (Date.now() - lectura.timestamp.getTime()) / 60000
+    : null
+  const lecturaVieja = minutosDesdeLectura !== null && minutosDesdeLectura > LECTURA_VIEJA_MIN
 
   return (
     <section>
       <h2 className="alertas-section-title">Alertas del Sistema</h2>
+
+      {/* ── Qué lectura se está evaluando ── */}
+      {lectura.timestamp && (
+        <Aviso tipo={lecturaVieja ? 'aviso' : 'info'}>
+          Última lectura: {formatHora(lectura.timestamp)} ({textoHace(lectura.timestamp)}).
+          {lecturaVieja && ' Los valores pueden no reflejar el estado actual: el sensor no envía datos hace un rato.'}
+        </Aviso>
+      )}
 
       {/* ── Lista de alertas activas ── */}
       <div className="alertas-list">
@@ -166,7 +245,7 @@ export default function Alertas() {
               {/* Mensaje descriptivo */}
               <span className="alerta-texto">{alerta.texto}</span>
             </div>
-            {/* Hora en que se generó la alerta */}
+            {/* Hora de la lectura que generó la alerta */}
             <span className="alerta-hora">{alerta.hora}</span>
           </div>
         ))}
@@ -180,7 +259,6 @@ export default function Alertas() {
         {UMBRALES_CONFIG.map((u, i) => {
           // Determina si el valor actual supera este umbral
           const enAlerta = estaEnAlerta(u, lectura)
-          const valorActual = lectura[u.variable]
 
           // Chip de estado: ALERTA si supera, OK si no
           const chipClass = enAlerta ? 'estado-chip estado-alerta' : 'estado-chip estado-ok'

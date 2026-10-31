@@ -7,7 +7,7 @@ import {
 import { Line } from 'react-chartjs-2'
 
 import { formatHora } from '../data/mockData'
-import { getLecturaActual, getHistorial24h } from '../data/Apiweather'
+import { getLecturaActual, getHistorial24h } from '../data/firebaseService'
 import './Dashboard.css'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend)

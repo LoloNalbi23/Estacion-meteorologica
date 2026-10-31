@@ -2,7 +2,6 @@
 node_modules/
 
 # Build de Vite
-dist/
 dist-ssr/
 
 # Variables de entorno (API keys)
