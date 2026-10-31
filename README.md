@@ -56,7 +56,7 @@ cp .env.example .env
 npm run dev
 ```
 
-Abrir [http://localhost:5173](http://localhost:5173).
+Abrir [https://misaelzanetti.pythonanywhere.com](https://misaelzanetti.pythonanywhere.com)
 
 ### Variables de entorno
 
