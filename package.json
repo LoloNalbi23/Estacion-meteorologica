@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "simulador": "node --env-file=.env scripts/simulador.mjs"
+    "simulador": "node --env-file=.env scripts/simulador.mjs",
+    "simulador-http": "node --env-file=.env scripts/simulador-http.mjs"
   },
   "dependencies": {
     "chart.js": "^4.4.3",
