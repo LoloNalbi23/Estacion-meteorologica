@@ -14,10 +14,10 @@
   margin-bottom: 1.2rem;
 }
 
-/* ── Grilla de tarjetas métricas (4 columnas arriba, 3 abajo) ───── */
+/* ── Grilla de tarjetas métricas ────────────────────────────────── */
 .dash-metrics-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
   margin-bottom: 1rem;
 }
@@ -101,8 +101,8 @@
 .color-temp  { color: #FBBF24; }   /* naranja/ámbar — temperatura */
 .color-hum   { color: #38BDF8; }   /* cyan — humedad */
 .color-pres  { color: #A78BFA; }   /* violeta — presión */
-.color-lux   { color: #FDE68A; }   /* amarillo — luminosidad */
 .color-wind  { color: #38BDF8; }   /* cyan — viento */
+.color-co    { color: #FB7185; }   /* rosa — CO */
 .color-uv    { color: #FB923C; }   /* naranja oscuro — UV */
 .color-rain  { color: #E6EDF3; }   /* blanco — precipitación */
 

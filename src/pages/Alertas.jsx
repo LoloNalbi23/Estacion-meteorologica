@@ -71,17 +71,17 @@ const UMBRALES_CONFIG = [
     mensaje:  (v) => `Humedad muy baja: ${v}% — riesgo de sequedad`,
   },
   {
-    nombre:   'Presión máx.',
+    nombre:   'Presión máx. (opcional)',
     limite:   1030,
     unidad:   ' hPa',
     variable: 'presion',
     op:       '>',
     tipo:     'info',
     icono:    'ℹ️',
-    mensaje:  (v) => `Presión atmosférica alta (${v} hPa) — típico de tiempo estable`,
+    mensaje:  (v) => `Presión atmosférica alta (${v} hPa)`,
   },
   {
-    nombre:   'Presión mín.',
+    nombre:   'Presión mín. (opcional)',
     limite:   990,
     unidad:   ' hPa',
     variable: 'presion',
@@ -90,23 +90,13 @@ const UMBRALES_CONFIG = [
     icono:    'ℹ️',
     mensaje:  (v) => `Presión atmosférica baja (${v} hPa) — posible mal tiempo`,
   },
-  {
-    nombre:   'Luminosidad máx.',
-    limite:   800,
-    unidad:   ' lux',
-    variable: 'luminosidad',
-    op:       '>',
-    tipo:     'warn',
-    icono:    '☀️',
-    mensaje:  (v) => `Luminosidad muy alta (${v} lux) — exceso de sol/luz directa`,
-  },
 ]
 
 // ── Helper: evalúa si un umbral está en alerta ────────────────────
 // Compara el valor actual contra el límite con el operador definido
 function estaEnAlerta(umbral, lectura) {
   const val = lectura[umbral.variable]
-  if (val == null) return false // sin dato (ej. luminosidad de noche puede ser 0, pero null = no disponible)
+  if (val == null) return false // variable opcional no disponible
   return umbral.op === '>' ? val > umbral.limite : val < umbral.limite
 }
 
@@ -139,12 +129,19 @@ function generarAlertas(lectura) {
   // Si ningún umbral está superado, se muestra un solo "todo OK"
   if (alertas.length === 0) {
     alertas.push({
-      tipo:  'ok',
-      icono: '✅',
-      texto: 'Todos los valores dentro del rango normal para la estación',
+      tipo:  'info',
+      icono: 'ℹ️',
+      texto: 'No se superaron los umbrales configurados; viento y CO todavía no tienen umbral definido.',
       hora,
     })
   }
+
+  alertas.push({
+    tipo: 'info',
+    icono: '🫧',
+    texto: `CO medido: ${lectura.co_concentracion} ppm. No hay umbral de alerta configurado; esta lectura no es una alarma de seguridad.`,
+    hora,
+  })
 
   // Alerta informativa siempre visible
   alertas.push({
@@ -255,7 +252,7 @@ export default function Alertas() {
       <div className="umbrales-panel">
         <p className="umbrales-title">Umbrales Configurados</p>
 
-        {/* Una fila por cada umbral definido en UMBRALES_CONFIG */}
+        {/* Umbrales configurados; viento y CO quedan informativos hasta acordar límites. */}
         {UMBRALES_CONFIG.map((u, i) => {
           // Determina si el valor actual supera este umbral
           const enAlerta = estaEnAlerta(u, lectura)
@@ -281,6 +278,20 @@ export default function Alertas() {
             </div>
           )
         })}
+        <div className="umbral-row">
+          <span className="umbral-nombre">Velocidad del viento</span>
+          <div className="umbral-right">
+            <span className="umbral-valor">Sin umbral</span>
+            <span className="estado-chip estado-pendiente">PENDIENTE</span>
+          </div>
+        </div>
+        <div className="umbral-row">
+          <span className="umbral-nombre">CO (MQ-7)</span>
+          <div className="umbral-right">
+            <span className="umbral-valor">Sin umbral</span>
+            <span className="estado-chip estado-pendiente">PENDIENTE</span>
+          </div>
+        </div>
       </div>
     </section>
   )

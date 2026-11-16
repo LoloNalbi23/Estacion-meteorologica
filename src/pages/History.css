@@ -1,6 +1,6 @@
 /* ================================================================
    History.css — Estilos de la ruta /history
-   4 gráficos de línea (2x2) + tabla de últimas 12h
+   Gráficos de línea + tabla de últimas 12h
    ================================================================ */
 
 /* ── Encabezado de sección + selector de período ────────────────── */
@@ -125,7 +125,8 @@
 .th-temp  { color: #FBBF24; }
 .th-hum   { color: #38BDF8; }
 .th-pres  { color: #A78BFA; }
-.th-lux   { color: #FDE68A; }
+.th-wind  { color: #34D399; }
+.th-co    { color: #FB7185; }
 
 /* Celdas */
 .reg-table td {
@@ -145,7 +146,14 @@
 .td-temp  { color: #FBBF24; }
 .td-hum   { color: #38BDF8; }
 .td-pres  { color: #A78BFA; }
-.td-lux   { color: #FDE68A; }
+.td-wind  { color: #34D399; }
+.td-co    { color: #FB7185; }
+
+.history-table-note {
+  color: #8B949E;
+  font-size: 0.72rem;
+  margin-top: 0.75rem;
+}
 
 /* Hover en fila */
 .reg-table tbody tr:hover td {

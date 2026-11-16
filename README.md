@@ -1,12 +1,12 @@
 # 🌦️ Estación Meteorológica
 
-Dashboard web para monitorear temperatura, humedad, presión y luminosidad, con historial, alertas por umbrales y una página que explica la arquitectura del proyecto.
+Dashboard web para monitorear temperatura, humedad relativa, velocidad del viento y concentración de monóxido de carbono, con historial y alertas por umbrales. La presión atmosférica del BME280 es opcional.
 
-> **Estado:** en desarrollo. Hoy el frontend consume APIs meteorológicas públicas; el backend (Flask) y la base de datos están en el roadmap.
+> **Estado:** en desarrollo. El ESP32/simulador envía lecturas a Flask; Flask las valida y guarda en Firestore. El frontend consulta Firestore.
 
 ## ✨ Funcionalidades
 
-- **Dashboard:** lectura actual de temperatura, humedad, presión y luminosidad.
+- **Dashboard:** lectura actual de temperatura, humedad, viento y CO; presión opcional.
 - **Historial:** gráficos por día (24 h), semana (7 días) y año (12 meses) con Chart.js.
 - **Alertas:** avisos cuando una variable supera los umbrales configurados.
 - **Proyecto:** explicación de la arquitectura ESP32 → Flask → React.
@@ -16,27 +16,41 @@ Dashboard web para monitorear temperatura, humedad, presión y luminosidad, con 
 - [React 18](https://react.dev/) + [Vite 5](https://vitejs.dev/)
 - [React Router](https://reactrouter.com/)
 - [Chart.js](https://www.chartjs.org/) con `react-chartjs-2`
-- Planificado: Flask (Python) + MariaDB + ESP32
+- Flask (Python) + Firebase/Firestore + ESP32
 
-## 📡 Origen de los datos
+## 📡 Contrato de lecturas
 
-| Dato | Fuente |
-|---|---|
-| Temperatura, humedad y presión actuales | [OpenWeatherMap](https://openweathermap.org/api) |
-| Luminosidad actual | [Open-Meteo](https://open-meteo.com/) (radiación solar convertida a lux, aproximada) |
-| Historial de 7 días | Open-Meteo Forecast API (`past_days=7`) |
-| Historial de 12 meses | Open-Meteo Archive API (ERA5) |
-| Historial de 24 h | Simulado (caminata aleatoria guardada en `localStorage`) |
-| Umbrales de alerta | Definidos en `src/data/mockData.js` |
+`POST /api/lecturas` recibe estos campos obligatorios:
 
-> ⚠️ La luminosidad en lux es una **estimación** a partir de radiación solar (`W/m² × 120`), no una medición de un sensor.
+| Campo | Unidad | Sensor / significado |
+|---|---|---|
+| `temperatura` | °C | DHT22 |
+| `humedad` | % relativa | DHT22 |
+| `velocidad_viento` | km/h | Anemómetro; el ESP32 envía la velocidad ya convertida |
+| `co_concentracion` | ppm | CO medido por MQ-7; no representa CO₂ ni un índice general de calidad del aire |
+
+`presion` (hPa) es opcional y se usa cuando se incorpora el BME280. Flask asigna `timestamp` en UTC al recibir cada lectura. Los límites de viento son una validación amplia de plausibilidad; deben ajustarse cuando se conozcan el anemómetro y su calibración. La lectura de CO todavía no tiene un umbral de alerta configurado.
+
+Ejemplo del cuerpo enviado por el ESP32 (se puede omitir `presion`):
+
+```json
+{
+  "temperatura": 24.3,
+  "humedad": 58.2,
+  "velocidad_viento": 12.5,
+  "co_concentracion": 18.0,
+  "presion": 1013.2
+}
+```
+
+`co_concentracion` debe ser una estimación calibrada en ppm; no se debe enviar directamente el valor crudo del ADC del MQ-7 con esa unidad.
 
 ## 🚀 Instalación y uso
 
 ### Requisitos
 
 - [Node.js](https://nodejs.org/) 18 o superior
-- Una API key gratuita de [OpenWeatherMap](https://openweathermap.org/api)
+- Credenciales de Firebase para el frontend y Flask
 
 ### Pasos
 
@@ -48,15 +62,15 @@ cd Estacion-meteorologica
 # 2. Instalar dependencias
 npm install
 
-# 3. Configurar la API key
+# 3. Configurar las variables de entorno de Firebase y Flask
 cp .env.example .env
-# editar .env y pegar tu key
+# completar las variables necesarias; FIREBASE_CREDENTIALS apunta a la clave Admin
 
 # 4. Iniciar en modo desarrollo
 npm run dev
 ```
 
-Abrir [https://misaelzanetti.pythonanywhere.com](https://misaelzanetti.pythonanywhere.com)
+Abrir la URL local que indique Vite (normalmente `http://localhost:5173`).
 
 ### Scripts disponibles
 
@@ -65,6 +79,8 @@ Abrir [https://misaelzanetti.pythonanywhere.com](https://misaelzanetti.pythonany
 | `npm run dev` | Servidor de desarrollo |
 | `npm run build` | Build de producción en `dist/` |
 | `npm run preview` | Previsualiza el build |
+| `npm run simulador` | Envía lecturas ficticias a `API_URL` cada 5 minutos |
+| `npm run simulador-http -- 1` | Envía lecturas ficticias cada 1 minuto |
 
 ## 📁 Estructura
 
@@ -76,7 +92,7 @@ Estacion-meteorologica/
 │   ├── pages/        # Dashboard, History, Alertas, Proyecto
 │   ├── App.jsx
 │   └── main.jsx
-├── routes/           # Rutas del futuro backend Flask (aún vacías)
+├── routes/           # Rutas Flask, incluida la recepción de lecturas
 ├── index.html
 ├── vite.config.js
 └── package.json
@@ -84,11 +100,10 @@ Estacion-meteorologica/
 
 ## 🗺️ Roadmap
 
-- [ ] Backend Flask con endpoints `/api/actual` y `/api/historial`
-- [ ] Base de datos MariaDB con tablas `umbrales`, `lecturas` y `alertas`
 - [ ] Integración del ESP32 con sensores reales
-- [ ] Reemplazar el historial de 24 h simulado por datos reales
-- [ ] Mover la API key al backend
+- [ ] Calibrar la conversión del anemómetro a km/h
+- [ ] Calibrar el MQ-7 para estimar CO en ppm y definir su umbral de alerta
+- [ ] Incorporar el BME280 como fuente opcional de presión
 
 ## 📄 Licencia
 

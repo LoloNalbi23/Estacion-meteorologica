@@ -1,6 +1,6 @@
 // =============================================================
 // History.jsx — Ruta "/history"
-// Muestra: 4 gráficos de línea (temperatura, humedad, presión, lux)
+// Muestra gráficos de temperatura, humedad, viento, CO y presión opcional
 //          con selector Día / Semana / Año,
 //          + tabla con las últimas 12 lecturas
 //
@@ -27,13 +27,14 @@ import './History.css'
 // pero lo dejamos aquí por claridad)
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend)
 
-// ── Configuración de los 4 gráficos ───────────────────────────────
+// ── Configuración de variables históricas ────────────────────────
 // Cada entrada define qué variable graficar y con qué color
 const GRAFICOS = [
   { key: 'temperatura', label: 'TEMPERATURA', color: '#FBBF24', unit: '°C' },
   { key: 'humedad', label: 'HUMEDAD', color: '#38BDF8', unit: '%' },
-  { key: 'presion', label: 'PRESIÓN', color: '#A78BFA', unit: ' hPa' },
-  { key: 'luminosidad', label: 'LUMINOSIDAD', color: '#FDE68A', unit: ' lux' },
+  { key: 'velocidad_viento', label: 'VELOCIDAD DEL VIENTO', color: '#34D399', unit: ' km/h' },
+  { key: 'co_concentracion', label: 'CO (MONÓXIDO DE CARBONO)', color: '#FB7185', unit: ' ppm' },
+  { key: 'presion', label: 'PRESIÓN (OPCIONAL)', color: '#A78BFA', unit: ' hPa' },
 ]
 
 // ── Mensajes ──────────────────────────────────────────────────────
@@ -288,8 +289,9 @@ export default function History() {
                   <th className="th-hora">Hora</th>
                   <th className="th-temp">Temp (°C)</th>
                   <th className="th-hum">Humedad (%)</th>
-                  <th className="th-pres">Presión (hPa)</th>
-                  <th className="th-lux">Lux</th>
+                  <th className="th-wind">Viento (km/h)</th>
+                  <th className="th-co">CO (ppm)</th>
+                  <th className="th-pres">Presión (hPa)*</th>
                 </tr>
               </thead>
               <tbody>
@@ -299,12 +301,14 @@ export default function History() {
                     <td className="td-hora">{formatHora(reg.timestamp)}</td>
                     <td className="td-temp">{reg.temperatura}</td>
                     <td className="td-hum">{reg.humedad}</td>
-                    <td className="td-pres">{reg.presion}</td>
-                    <td className="td-lux">{reg.luminosidad.toLocaleString('es-AR')}</td>
+                    <td className="td-wind">{reg.velocidad_viento}</td>
+                    <td className="td-co">{reg.co_concentracion}</td>
+                    <td className="td-pres">{reg.presion ?? '—'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            <p className="history-table-note">* La presión solo aparece si se envía una lectura del BME280.</p>
           </div>
         )}
     </section>

@@ -15,7 +15,7 @@ const PASOS = [
     titleClass: 'title-sensor',
     icono: '📡',
     titulo: 'Sensores',
-    desc: 'Captura de datos del entorno: temperatura, humedad, presión, luminosidad, viento',
+    desc: 'Captura de temperatura, humedad relativa, velocidad del viento y concentración de monóxido de carbono; presión opcional',
   },
   {
     num: 2,
@@ -61,13 +61,10 @@ const PASOS = [
 
 // ── Datos de la sección EPyS (Entradas / Procesos / Salidas) ─────
 const ENTRADAS = [
-  'Sensor de temperatura (DHT22)',
-  'Sensor de humedad (DHT22)',
-  'Sensor de presión (BMP280)',
-  'Sensor de luminosidad (BH1750)',
-  'Sensor de viento (anemómetro)',
-  'Sensor de lluvia',
-  'Índice UV (VEML6070)',
+  'Temperatura y humedad (DHT22)',
+  'Anemómetro con salida de pulsos, convertido a km/h en el ESP32',
+  'Monóxido de carbono (MQ-7, ppm)',
+  'Presión atmosférica opcional (BME280, hPa)',
 ]
 
 const PROCESOS = [

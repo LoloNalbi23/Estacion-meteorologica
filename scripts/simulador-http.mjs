@@ -16,8 +16,14 @@ if (!URL || !API_KEY) {
   process.exit(1)
 }
 
-// Estado actual: los valores cambian de a poco, como en la realidad
-const estado = { temperatura: 24, humedad: 58, presion: 1013, luminosidad: 450 }
+// Valores ficticios para probar el contrato; no son mediciones del MQ-7.
+const estado = {
+  temperatura: 24,
+  humedad: 58,
+  velocidad_viento: 12,
+  co_concentracion: 18,
+  presion: 1013,
+}
 
 const mover = (valor, paso, min, max) => {
   const nuevo = valor + (Math.random() - 0.5) * paso * 2
@@ -27,8 +33,9 @@ const mover = (valor, paso, min, max) => {
 async function enviarLectura() {
   estado.temperatura = mover(estado.temperatura, 0.8, 5, 42)
   estado.humedad = mover(estado.humedad, 2, 20, 95)
+  estado.velocidad_viento = mover(estado.velocidad_viento, 4, 0, 120)
+  estado.co_concentracion = mover(estado.co_concentracion, 3, 0, 500)
   estado.presion = mover(estado.presion, 0.6, 990, 1035)
-  estado.luminosidad = mover(estado.luminosidad, 60, 0, 1200)
 
   const hora = new Date().toLocaleTimeString()
 
@@ -42,8 +49,10 @@ async function enviarLectura() {
       body: JSON.stringify({
         temperatura: Number(estado.temperatura.toFixed(1)),
         humedad: Number(estado.humedad.toFixed(1)),
+        velocidad_viento: Number(estado.velocidad_viento.toFixed(1)),
+        co_concentracion: Number(estado.co_concentracion.toFixed(1)),
+        // Simula el BME280; el backend también acepta que este campo no llegue.
         presion: Number(estado.presion.toFixed(1)),
-        luminosidad: Math.round(estado.luminosidad),
       }),
     })
 

@@ -15,8 +15,9 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, 
 const VARIABLES = {
   temperatura: { label: 'Temperatura', color: '#FBBF24', unit: '°C',   key: 'temperatura' },
   humedad:     { label: 'Humedad',     color: '#38BDF8', unit: '%',    key: 'humedad'     },
-  presion:     { label: 'Presión',     color: '#A78BFA', unit: ' hPa', key: 'presion'     },
-  luminosidad: { label: 'Luminosidad', color: '#FDE68A', unit: ' lux', key: 'luminosidad' },
+  velocidad_viento: { label: 'Viento', color: '#34D399', unit: ' km/h', key: 'velocidad_viento' },
+  co_concentracion: { label: 'CO', color: '#FB7185', unit: ' ppm', key: 'co_concentracion' },
+  presion:     { label: 'Presión (opcional)', color: '#A78BFA', unit: ' hPa', key: 'presion' },
 }
 
 function calcDelta(actual, anterior, decimales = 1) {
@@ -26,7 +27,7 @@ function calcDelta(actual, anterior, decimales = 1) {
   return { texto: `${signo}${diff}`, tipo }
 }
 
-// Delta seguro: si falta el dato (ej. luminosidad = null), no explota
+// Delta seguro: si falta un dato opcional, no intenta restarlo.
 function calcDeltaSeguro(actual, anterior, decimales = 1) {
   if (actual == null || anterior == null) {
     return { texto: '—', tipo: 'same' }
@@ -130,14 +131,19 @@ export default function Dashboard() {
       unidadDelta: '%', colorClass: 'color-hum', icono: '💧'
     },
     {
-      label: 'PRESIÓN ATM.', valor: lectura.presion, unidad: ' hPa',
-      delta: calcDeltaSeguro(lectura.presion, penultima.presion),
-      unidadDelta: ' hPa', colorClass: 'color-pres', icono: '🌀'
+      label: 'VELOCIDAD DEL VIENTO', valor: lectura.velocidad_viento, unidad: ' km/h',
+      delta: calcDeltaSeguro(lectura.velocidad_viento, penultima.velocidad_viento),
+      unidadDelta: ' km/h', colorClass: 'color-wind', icono: '🌬️'
     },
     {
-      label: 'LUMINOSIDAD', valor: lectura.luminosidad, unidad: ' lux',
-      delta: calcDeltaSeguro(lectura.luminosidad, penultima.luminosidad),
-      unidadDelta: ' lux', colorClass: 'color-lux', icono: '☀️'
+      label: 'CO (MONÓXIDO DE CARBONO)', valor: lectura.co_concentracion, unidad: ' ppm',
+      delta: calcDeltaSeguro(lectura.co_concentracion, penultima.co_concentracion),
+      unidadDelta: ' ppm', colorClass: 'color-co', icono: '🫧'
+    },
+    {
+      label: 'PRESIÓN ATM. (OPCIONAL)', valor: lectura.presion, unidad: ' hPa',
+      delta: calcDeltaSeguro(lectura.presion, penultima.presion),
+      unidadDelta: ' hPa', colorClass: 'color-pres', icono: '🌀'
     },
   ]
 

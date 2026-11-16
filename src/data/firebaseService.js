@@ -1,8 +1,7 @@
 // firebaseService.js — Lecturas desde Firebase (Firestore) para el dashboard.
 //
-// Devuelve los datos con la misma forma que antes entregaba Apiweather.js:
-//   { temperatura, humedad, presion, luminosidad, timestamp: Date }
-// Así las páginas solo tienen que cambiar el import.
+// Contrato: temperatura (°C), humedad (%), velocidad_viento (km/h),
+// co_concentracion (ppm), presion (hPa opcional), timestamp (Date).
 //
 // IMPORTANTE: este archivo corre en el NAVEGADOR (Vite). No usar
 // process.exit(), console.table ni nada de Node. Las funciones DEVUELVEN
@@ -117,24 +116,29 @@ async function promediarRango(inicio, fin) {
     muestras: count(),
     temperatura: average('temperatura'),
     humedad: average('humedad'),
+    velocidad_viento: average('velocidad_viento'),
+    co_concentracion: average('co_concentracion'),
     presion: average('presion'),
-    luminosidad: average('luminosidad'),
   })
   const d = snap.data()
-  if (!d.muestras || d.temperatura == null) return null
-  return {
+  if (
+    !d.muestras || d.temperatura == null || d.humedad == null ||
+    d.velocidad_viento == null || d.co_concentracion == null
+  ) return null
+  const promedio = {
     muestras: d.muestras,
     temperatura: redondear(d.temperatura, 1),
     humedad: redondear(d.humedad, 1),
-    presion: redondear(d.presion, 1),
-    luminosidad: Math.round(d.luminosidad),
+    velocidad_viento: redondear(d.velocidad_viento, 1),
+    co_concentracion: redondear(d.co_concentracion, 1),
   }
+  if (d.presion != null) promedio.presion = redondear(d.presion, 1)
+  return promedio
 }
 
 // Un punto por día de los últimos 7 días (hoy incluido), del más viejo al
 // más nuevo. Los días sin lecturas no aparecen.
-// Cada punto: { timestamp: Date (inicio del día), temperatura, humedad,
-//               presion, luminosidad, muestras }
+// Cada punto contiene el contrato de medición y `muestras`; `presion` puede faltar.
 export async function getHistorialSemana() {
   const hoy = new Date()
   const rangos = []
@@ -155,9 +159,7 @@ export async function getHistorialSemana() {
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 
 // Un punto por mes de los últimos 12 meses (el actual incluido), del más
-// viejo al más nuevo. Los meses sin lecturas no aparecen.
-// Cada punto: { timestamp: Date (inicio del mes), label: 'Ene', temperatura,
-//               humedad, presion, luminosidad, muestras }
+// viejo al más nuevo. Los meses sin lecturas no aparecen; `presion` es opcional.
 export async function getHistorialAnio() {
   const hoy = new Date()
   const rangos = []
