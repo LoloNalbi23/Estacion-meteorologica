@@ -63,7 +63,7 @@ const IconRefresh = () => (
 // ── Componente principal ──────────────────────────────────────────
 export default function Navbar() {
   // Redondea "hacia abajo" a la hora en punto (minutos y segundos a 0),
-  // mismo criterio que usa el historial en Apiweather.js — así "Última
+  // mismo criterio que usa el historial de Firebase — así "Última
   // actualización" siempre muestra algo prolijo como 14:00, nunca 14:33.
   const redondearHora = (fecha) => {
     const d = new Date(fecha)

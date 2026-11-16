@@ -58,14 +58,6 @@ npm run dev
 
 Abrir [https://misaelzanetti.pythonanywhere.com](https://misaelzanetti.pythonanywhere.com)
 
-### Variables de entorno
-
-Crear un archivo `.env` en la raíz (no se sube a Git):
-
-```env
-VITE_OWM_KEY=tu_api_key_de_openweathermap
-```
-
 ### Scripts disponibles
 
 | Comando | Descripción |
@@ -80,7 +72,7 @@ VITE_OWM_KEY=tu_api_key_de_openweathermap
 Estacion-meteorologica/
 ├── src/
 │   ├── components/   # Navbar
-│   ├── data/         # Apiweather.js (APIs) y mockData.js (umbrales y datos de prueba)
+│   ├── data/         # firebaseService.js (Firestore) y mockData.js (datos de prueba)
 │   ├── pages/        # Dashboard, History, Alertas, Proyecto
 │   ├── App.jsx
 │   └── main.jsx
