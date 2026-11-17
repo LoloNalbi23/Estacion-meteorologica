@@ -29,7 +29,7 @@ Dashboard web para monitorear temperatura, humedad relativa, velocidad del vient
 | `velocidad_viento` | km/h | Anemómetro; el ESP32 envía la velocidad ya convertida |
 | `co_concentracion` | ppm | CO medido por MQ-7; no representa CO₂ ni un índice general de calidad del aire |
 
-`presion` (hPa) es opcional y se usa cuando se incorpora el BME280. Flask asigna `timestamp` en UTC al recibir cada lectura. Los límites de viento son una validación amplia de plausibilidad; deben ajustarse cuando se conozcan el anemómetro y su calibración. La lectura de CO todavía no tiene un umbral de alerta configurado.
+`presion` (hPa) es opcional y se usa cuando se incorpora el BME280. Flask asigna `timestamp` en UTC al recibir cada lectura. Los límites de viento son una validación amplia de plausibilidad; deben ajustarse cuando se conozcan el anemómetro y su calibración. La lectura de CO todavía no tiene un umbral de alerta configurado. El simulador omite presión por defecto; para simular también el BME280, usar `SIMULAR_PRESION=true` en `.env`.
 
 Ejemplo del cuerpo enviado por el ESP32 (se puede omitir `presion`):
 

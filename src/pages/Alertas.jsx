@@ -70,26 +70,6 @@ const UMBRALES_CONFIG = [
     icono:    '⚠️',
     mensaje:  (v) => `Humedad muy baja: ${v}% — riesgo de sequedad`,
   },
-  {
-    nombre:   'Presión máx. (opcional)',
-    limite:   1030,
-    unidad:   ' hPa',
-    variable: 'presion',
-    op:       '>',
-    tipo:     'info',
-    icono:    'ℹ️',
-    mensaje:  (v) => `Presión atmosférica alta (${v} hPa)`,
-  },
-  {
-    nombre:   'Presión mín. (opcional)',
-    limite:   990,
-    unidad:   ' hPa',
-    variable: 'presion',
-    op:       '<',
-    tipo:     'info',
-    icono:    'ℹ️',
-    mensaje:  (v) => `Presión atmosférica baja (${v} hPa) — posible mal tiempo`,
-  },
 ]
 
 // ── Helper: evalúa si un umbral está en alerta ────────────────────
@@ -126,12 +106,12 @@ function generarAlertas(lectura) {
       hora,
     }))
 
-  // Si ningún umbral está superado, se muestra un solo "todo OK"
+  // No declarar que todos los valores están OK si hay variables sin umbral.
   if (alertas.length === 0) {
     alertas.push({
       tipo:  'info',
       icono: 'ℹ️',
-      texto: 'No se superaron los umbrales configurados; viento y CO todavía no tienen umbral definido.',
+      texto: 'No se superaron los umbrales configurados; viento, CO y presión todavía no tienen umbral definido.',
       hora,
     })
   }
@@ -287,6 +267,13 @@ export default function Alertas() {
         </div>
         <div className="umbral-row">
           <span className="umbral-nombre">CO (MQ-7)</span>
+          <div className="umbral-right">
+            <span className="umbral-valor">Sin umbral</span>
+            <span className="estado-chip estado-pendiente">PENDIENTE</span>
+          </div>
+        </div>
+        <div className="umbral-row">
+          <span className="umbral-nombre">Presión (BME280, opcional)</span>
           <div className="umbral-right">
             <span className="umbral-valor">Sin umbral</span>
             <span className="estado-chip estado-pendiente">PENDIENTE</span>

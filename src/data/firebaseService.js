@@ -94,9 +94,10 @@ export async function getHistorial24h() {
 // lecturas de la cuota gratuita (Firestore cobra 1 lectura por cada 1.000
 // registros revisados).
 //
-// Si un día o un mes NO tiene lecturas guardadas, simplemente se omite:
-// nunca se inventan ni se rellenan datos. Si no hay nada en todo el
-// período, la función devuelve [] y la página muestra un aviso.
+// Cada variable se promedia de forma independiente con las lecturas que
+// tienen un valor numérico para ese campo. Si falta una variable, su promedio
+// queda null y el gráfico muestra un hueco; eso no descarta las demás. Un
+// día o mes se omite solo si no tiene documentos.
 //
 // La primera vez, Firestore puede pedir crear un ÍNDICE COMPUESTO: el error
 // que aparece en la consola del navegador (F12) trae un link. Hay que
@@ -104,8 +105,8 @@ export async function getHistorial24h() {
 
 const redondear = (n, decimales) => Number(n.toFixed(decimales))
 
-// Promedio de cada variable entre 'inicio' (incluido) y 'fin' (excluido).
-// Devuelve null si en ese rango no hay ninguna lectura.
+// Promedio independiente por variable entre 'inicio' (incluido) y 'fin'
+// (excluido). Devuelve null solo si no hay documentos en el rango.
 async function promediarRango(inicio, fin) {
   const q = query(
     collection(db, 'lecturas'),
@@ -121,18 +122,19 @@ async function promediarRango(inicio, fin) {
     presion: average('presion'),
   })
   const d = snap.data()
-  if (
-    !d.muestras || d.temperatura == null || d.humedad == null ||
-    d.velocidad_viento == null || d.co_concentracion == null
-  ) return null
+  if (!d.muestras) return null
+
+  const promedioDe = (valor, decimales = 1) =>
+    valor == null ? null : redondear(valor, decimales)
+
   const promedio = {
     muestras: d.muestras,
-    temperatura: redondear(d.temperatura, 1),
-    humedad: redondear(d.humedad, 1),
-    velocidad_viento: redondear(d.velocidad_viento, 1),
-    co_concentracion: redondear(d.co_concentracion, 1),
+    temperatura: promedioDe(d.temperatura),
+    humedad: promedioDe(d.humedad),
+    velocidad_viento: promedioDe(d.velocidad_viento),
+    co_concentracion: promedioDe(d.co_concentracion),
   }
-  if (d.presion != null) promedio.presion = redondear(d.presion, 1)
+  if (d.presion != null) promedio.presion = promedioDe(d.presion)
   return promedio
 }
 

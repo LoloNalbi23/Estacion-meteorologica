@@ -72,7 +72,10 @@ export default function Dashboard() {
   // penultima = último registro guardado del historial (la hora más
   // reciente ya "cerrada"); lectura = snapshot en vivo de ahora mismo.
   const penultima = historial[historial.length - 1] || historial[0]
-  const config = VARIABLES[varActiva]
+  const tienePresion = lectura.presion != null || historial.some(d => d.presion != null)
+  const variablesDisponibles = Object.entries(VARIABLES)
+    .filter(([key]) => key !== 'presion' || tienePresion)
+  const config = VARIABLES[varActiva] ?? VARIABLES.temperatura
 
   const chartData = {
     labels: historial.map(d => formatHora(d.timestamp)),
@@ -140,12 +143,14 @@ export default function Dashboard() {
       delta: calcDeltaSeguro(lectura.co_concentracion, penultima.co_concentracion),
       unidadDelta: ' ppm', colorClass: 'color-co', icono: '🫧'
     },
-    {
-      label: 'PRESIÓN ATM. (OPCIONAL)', valor: lectura.presion, unidad: ' hPa',
+  ]
+  if (lectura.presion != null) {
+    tarjetas.push({
+      label: 'PRESIÓN ATM.', valor: lectura.presion, unidad: ' hPa',
       delta: calcDeltaSeguro(lectura.presion, penultima.presion),
       unidadDelta: ' hPa', colorClass: 'color-pres', icono: '🌀'
-    },
-  ]
+    })
+  }
 
   return (
     <section>
@@ -157,7 +162,7 @@ export default function Dashboard() {
         <div className="dash-chart-header">
           <span className="dash-chart-title">Últimas 24 Horas</span>
           <div className="chart-tabs">
-            {Object.entries(VARIABLES).map(([key, cfg]) => (
+            {variablesDisponibles.map(([key, cfg]) => (
               <button
                 key={key}
                 className={`chart-tab ${varActiva === key ? 'active' : ''}`}

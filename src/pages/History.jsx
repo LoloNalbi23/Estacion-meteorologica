@@ -197,6 +197,10 @@ export default function History() {
   const error = errores[periodo]
   const cargandoActual = datosPeriodo === null && !error
   const datos = datosPeriodo ?? []
+  const graficosVisibles = GRAFICOS.filter(
+    cfg => cfg.key !== 'presion' || datos.some(d => d.presion != null)
+  )
+  const mostrarPresionTabla = Boolean(historial24h?.some(reg => reg.presion != null))
 
   const labels = (() => {
     if (periodo === '7d') return datos.map(d => formatFecha(d.timestamp))
@@ -235,7 +239,7 @@ export default function History() {
 
         {/* ── Grilla 2x2 de gráficos de línea ── */}
         <div className="history-charts-grid">
-          {GRAFICOS.map(cfg => (
+          {graficosVisibles.map(cfg => (
             <ChartPanel
               key={cfg.key}
               config={cfg}
@@ -291,7 +295,7 @@ export default function History() {
                   <th className="th-hum">Humedad (%)</th>
                   <th className="th-wind">Viento (km/h)</th>
                   <th className="th-co">CO (ppm)</th>
-                  <th className="th-pres">Presión (hPa)*</th>
+                  {mostrarPresionTabla && <th className="th-pres">Presión (hPa)</th>}
                 </tr>
               </thead>
               <tbody>
@@ -303,12 +307,12 @@ export default function History() {
                     <td className="td-hum">{reg.humedad}</td>
                     <td className="td-wind">{reg.velocidad_viento}</td>
                     <td className="td-co">{reg.co_concentracion}</td>
-                    <td className="td-pres">{reg.presion ?? '—'}</td>
+                    {mostrarPresionTabla && <td className="td-pres">{reg.presion ?? '—'}</td>}
                   </tr>
                 ))}
               </tbody>
             </table>
-            <p className="history-table-note">* La presión solo aparece si se envía una lectura del BME280.</p>
+            {mostrarPresionTabla && <p className="history-table-note">Presión medida por el BME280 (opcional).</p>}
           </div>
         )}
     </section>
