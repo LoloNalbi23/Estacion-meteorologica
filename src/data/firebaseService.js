@@ -87,6 +87,26 @@ export async function getHistorial24h() {
   return snap.docs.map(convertir).reverse()
 }
 
+// Escucha las lecturas de las últimas 24 horas y vuelve a entregar la serie
+// cuando Firestore agrega una lectura nueva. Devuelve el cleanup de onSnapshot.
+export function escucharHistorial24h(callback, onError) {
+  const desde = Timestamp.fromMillis(Date.now() - 24 * UNA_HORA_MS)
+  const q = query(
+    collection(db, 'lecturas'),
+    where('timestamp', '>=', desde),
+    orderBy('timestamp', 'desc'),
+    limit(MAX_HISTORIAL)
+  )
+  return onSnapshot(
+    q,
+    (snap) => callback(snap.docs.map(convertir).reverse()),
+    (error) => {
+      console.error('Error escuchando el historial de 24 horas:', error)
+      if (onError) onError(error)
+    }
+  )
+}
+
 // ── Promedios por período (semana y año) ──────────────────────────
 //
 // Se calculan EN EL SERVIDOR de Firestore con consultas de agregación:

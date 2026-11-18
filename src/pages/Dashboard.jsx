@@ -7,7 +7,7 @@ import {
 import { Line } from 'react-chartjs-2'
 
 import { formatHora } from '../data/mockData'
-import { getLecturaActual, getHistorial24h } from '../data/firebaseService'
+import { escucharLecturaActual, escucharHistorial24h } from '../data/firebaseService'
 import './Dashboard.css'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend)
@@ -59,14 +59,40 @@ export default function Dashboard() {
   const [varActiva, setVarActiva] = useState('temperatura')
   const [lectura, setLectura] = useState(null)
   const [historial, setHistorial] = useState([])
+  const [cargando, setCargando] = useState(true)
+  const [error, setError] = useState(false)
 
   useEffect(() => {
-    getLecturaActual().then(setLectura)
-    getHistorial24h().then(setHistorial)
+    let lecturasListas = false
+    let historialListo = false
+    const actualizarCarga = () => {
+      if (lecturasListas && historialListo) setCargando(false)
+    }
+    const alError = (err) => {
+      console.error('Error consultando datos del Dashboard:', err)
+      setError(true)
+      setCargando(false)
+    }
+    const dejarDeEscucharLectura = escucharLecturaActual((nuevaLectura) => {
+      setLectura(nuevaLectura)
+      lecturasListas = true
+      actualizarCarga()
+    }, alError)
+    const dejarDeEscucharHistorial = escucharHistorial24h((nuevasLecturas) => {
+      setHistorial(nuevasLecturas)
+      historialListo = true
+      actualizarCarga()
+    }, alError)
+    return () => {
+      dejarDeEscucharLectura()
+      dejarDeEscucharHistorial()
+    }
   }, [])
 
   // ── El if va ANTES de usar lectura, pero DESPUÉS de los hooks ────
-  if (!lectura || historial.length === 0) return <p style={{ color: '#8B949E', padding: '2rem' }}>Cargando datos...</p>
+  if (cargando) return <p style={{ color: '#8B949E', padding: '2rem' }}>Cargando datos...</p>
+  if (error) return <p style={{ color: '#F87171', padding: '2rem' }}>No se pudieron consultar los datos. Revisá la conexión con Firestore.</p>
+  if (!lectura || historial.length === 0) return <p style={{ color: '#8B949E', padding: '2rem' }}>Todavía no hay lecturas en la base de datos.</p>
 
   // A partir de acá lectura e historial están disponibles.
   // penultima = último registro guardado del historial (la hora más
