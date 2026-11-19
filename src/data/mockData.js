@@ -23,7 +23,7 @@ export const datos12h = Array.from({ length: 12 }, (_, i) => ({
   temperatura: ruido(24, 3),    // °C — rango normal interior ~20-28
   humedad: ruido(58, 8),        // %  — rango normal ~40-70
   velocidad_viento: ruido(15, 8),
-  co_concentracion: ruido(25, 10),
+  co_concentracion: ruido(6, 2),
   presion: ruido(1013, 5),      // hPa — opcional, para BME280
 }));
 
@@ -36,7 +36,7 @@ export const datos7d = Array.from({ length: 7 }, (_, i) => {
     temperatura: ruido(23, 4),
     humedad: ruido(60, 10),
     velocidad_viento: ruido(18, 10),
-    co_concentracion: ruido(30, 12),
+    co_concentracion: ruido(6, 2),
     presion: ruido(1013, 8),
   };
 });
@@ -52,7 +52,7 @@ export const datos12m = Array.from({ length: 12 }, (_, i) => {
     temperatura: ruido(20, 6),
     humedad: ruido(58, 12),
     velocidad_viento: ruido(16, 10),
-    co_concentracion: ruido(28, 12),
+    co_concentracion: ruido(6, 2),
     presion: ruido(1013, 10),
   };
 });
@@ -71,9 +71,11 @@ export const lecturaActual = {
 // ── UMBRALES DE ALERTA (hardcodeados — luego podrían venir de config Flask) ──
 // Si el valor supera el umbral, se genera una alerta en /alertas
 export const UMBRALES = {
-  temperatura: { min: 10, max: 35, unidad: '°C', label: 'Temperatura' },
-  humedad:     { min: 30, max: 80, unidad: '%',  label: 'Humedad' },
-  presion:     { min: 990, max: 1030, unidad: 'hPa', label: 'Presión (opcional)' },
+  temperatura:      { min: 5,    max: 35,   unidad: '°C',   label: 'Temperatura' },
+  humedad:          { min: 10,   max: 75,   unidad: '%',    label: 'Humedad' },
+  velocidad_viento: { min: 0,    max: 50,   unidad: 'km/h', label: 'Velocidad del viento' },
+  co_concentracion: { min: 0,    max: 10,   unidad: 'ppm',  label: 'CO (MQ-7)' },
+  presion:          { min: 1010, max: 1020, unidad: 'hPa',  label: 'Presión (opcional)' },
 };
 
 // ── Helper: formatea un Date a "HH:MM" ──────────────────────────────────────

@@ -23,7 +23,7 @@ const estado = {
   temperatura: 24,
   humedad: 58,
   velocidad_viento: 12,
-  co_concentracion: 18,
+  co_concentracion: 8,
   ...(incluirPresion ? { presion: 1013 } : {}),
 }
 
@@ -36,7 +36,7 @@ async function enviarLectura() {
   estado.temperatura = mover(estado.temperatura, 0.8, 5, 42)
   estado.humedad = mover(estado.humedad, 2, 20, 95)
   estado.velocidad_viento = mover(estado.velocidad_viento, 4, 0, 120)
-  estado.co_concentracion = mover(estado.co_concentracion, 3, 0, 500)
+  estado.co_concentracion = mover(estado.co_concentracion, 2, 0, 500)
   if (incluirPresion) estado.presion = mover(estado.presion, 0.6, 990, 1035)
 
   const hora = new Date().toLocaleTimeString()
