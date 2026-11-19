@@ -38,37 +38,89 @@ const UMBRALES_CONFIG = [
     op:       '>',
     tipo:     'danger',
     icono:    '🔴',
-    mensaje:  (v) => `Temperatura crítica: ${v}°C supera el límite de 35°C`,
+    mensaje:  (v) => `Temperatura alta: ${v}°C supera el máximo configurado de 35°C`,
   },
   {
     nombre:   'Temperatura mín.',
-    limite:   10,
+    limite:   5,
     unidad:   '°C',
     variable: 'temperatura',
     op:       '<',
     tipo:     'warn',
     icono:    '🔵',
-    mensaje:  (v) => `Temperatura baja: ${v}°C por debajo de 10°C`,
+    mensaje:  (v) => `Temperatura baja: ${v}°C está por debajo del mínimo configurado de 5°C`,
   },
   {
     nombre:   'Humedad máx.',
-    limite:   80,
+    limite:   75,
     unidad:   '%',
     variable: 'humedad',
     op:       '>',
     tipo:     'warn',
     icono:    '⚠️',
-    mensaje:  (v) => `Humedad relativa alta (${v}%) — posible condensación`,
+    mensaje:  (v) => `Humedad relativa alta: ${v}% supera el máximo configurado de 75%`,
   },
   {
     nombre:   'Humedad mín.',
-    limite:   30,
+    limite:   10,
     unidad:   '%',
     variable: 'humedad',
     op:       '<',
     tipo:     'warn',
     icono:    '⚠️',
-    mensaje:  (v) => `Humedad muy baja: ${v}% — riesgo de sequedad`,
+    mensaje:  (v) => `Humedad relativa baja: ${v}% está por debajo del mínimo configurado de 10%`,
+  },
+  {
+    nombre:   'Velocidad del viento máx.',
+    limite:   50,
+    unidad:   ' km/h',
+    variable: 'velocidad_viento',
+    op:       '>',
+    tipo:     'danger',
+    icono:    '🌬️',
+    display:  '≤ 50 km/h',
+    mensaje:  (v) => `Velocidad del viento (${v} km/h) supera el máximo configurado de 50 km/h`,
+  },
+  {
+    nombre:   'CO máx. (MQ-7)',
+    limite:   10,
+    unidad:   ' ppm',
+    variable: 'co_concentracion',
+    op:       '>',
+    tipo:     'danger',
+    icono:    '⚠️',
+    display:  '0–10 ppm',
+    mensaje:  (v) => `CO medido (${v} ppm) supera el máximo configurado de 10 ppm`,
+  },
+  {
+    nombre:   'CO mín. (MQ-7)',
+    limite:   0,
+    unidad:   ' ppm',
+    variable: 'co_concentracion',
+    op:       '<',
+    tipo:     'warn',
+    icono:    '⚠️',
+    mensaje:  (v) => `CO medido (${v} ppm) está por debajo del mínimo configurado de 0 ppm`,
+  },
+  {
+    nombre:   'Presión máx. (BME280)',
+    limite:   1020,
+    unidad:   ' hPa',
+    variable: 'presion',
+    op:       '>',
+    tipo:     'info',
+    icono:    'ℹ️',
+    mensaje:  (v) => `Presión atmosférica (${v} hPa) supera el máximo configurado de 1020 hPa`,
+  },
+  {
+    nombre:   'Presión mín. (BME280)',
+    limite:   1010,
+    unidad:   ' hPa',
+    variable: 'presion',
+    op:       '<',
+    tipo:     'info',
+    icono:    'ℹ️',
+    mensaje:  (v) => `Presión atmosférica (${v} hPa) está por debajo del mínimo configurado de 1010 hPa`,
   },
 ]
 
@@ -106,20 +158,32 @@ function generarAlertas(lectura) {
       hora,
     }))
 
-  // No declarar que todos los valores están OK si hay variables sin umbral.
+  // No declarar que todos los valores están OK si falta presión opcional.
   if (alertas.length === 0) {
+    const camposObligatorios = [
+      'temperatura', 'humedad', 'velocidad_viento', 'co_concentracion',
+    ]
+    const sinLectura = camposObligatorios.filter(campo => lectura[campo] == null)
+
     alertas.push({
       tipo:  'info',
       icono: 'ℹ️',
-      texto: 'No se superaron los umbrales configurados; viento, CO y presión todavía no tienen umbral definido.',
+      texto: sinLectura.length
+        ? `No se superaron los umbrales evaluables; faltan lecturas de ${sinLectura.join(', ')}.`
+        : lectura.presion == null
+          ? 'Las variables con lectura están dentro de rango; no llegó la presión opcional del BME280.'
+          : 'Todos los valores están dentro de los rangos configurados.',
       hora,
     })
   }
 
+  const coActual = lectura.co_concentracion
   alertas.push({
     tipo: 'info',
     icono: '🫧',
-    texto: `CO medido: ${lectura.co_concentracion} ppm. No hay umbral de alerta configurado; esta lectura no es una alarma de seguridad.`,
+    texto: coActual == null
+      ? 'No hay lectura de CO disponible para evaluar.'
+      : `CO medido por el MQ-7: ${coActual} ppm. El umbral es 10 ppm; el rango especificado del sensor empieza en 10 ppm, y esta lectura no sustituye una alarma certificada de CO.`,
     hora,
   })
 
@@ -232,14 +296,17 @@ export default function Alertas() {
       <div className="umbrales-panel">
         <p className="umbrales-title">Umbrales Configurados</p>
 
-        {/* Umbrales configurados; viento y CO quedan informativos hasta acordar límites. */}
+        {/* Muestra los límites y el estado de cada variable configurada. */}
         {UMBRALES_CONFIG.map((u, i) => {
           // Determina si el valor actual supera este umbral
           const enAlerta = estaEnAlerta(u, lectura)
+          const tieneDato = lectura[u.variable] != null
 
-          // Chip de estado: ALERTA si supera, OK si no
-          const chipClass = enAlerta ? 'estado-chip estado-alerta' : 'estado-chip estado-ok'
-          const chipLabel = enAlerta ? 'ALERTA' : 'OK'
+          // No mostrar OK si el sensor no entregó esa variable.
+          const chipClass = !tieneDato
+            ? 'estado-chip estado-pendiente'
+            : enAlerta ? 'estado-chip estado-alerta' : 'estado-chip estado-ok'
+          const chipLabel = !tieneDato ? 'SIN DATO' : enAlerta ? 'ALERTA' : 'OK'
 
           return (
             <div key={i} className="umbral-row">
@@ -249,7 +316,7 @@ export default function Alertas() {
               <div className="umbral-right">
                 {/* Valor límite configurado */}
                 <span className="umbral-valor">
-                  {u.limite}{u.unidad}
+                  {u.display ?? `${u.limite}${u.unidad}`}
                 </span>
 
                 {/* Chip dinámico: OK verde / ALERTA ámbar */}
@@ -258,27 +325,6 @@ export default function Alertas() {
             </div>
           )
         })}
-        <div className="umbral-row">
-          <span className="umbral-nombre">Velocidad del viento</span>
-          <div className="umbral-right">
-            <span className="umbral-valor">Sin umbral</span>
-            <span className="estado-chip estado-pendiente">PENDIENTE</span>
-          </div>
-        </div>
-        <div className="umbral-row">
-          <span className="umbral-nombre">CO (MQ-7)</span>
-          <div className="umbral-right">
-            <span className="umbral-valor">Sin umbral</span>
-            <span className="estado-chip estado-pendiente">PENDIENTE</span>
-          </div>
-        </div>
-        <div className="umbral-row">
-          <span className="umbral-nombre">Presión (BME280, opcional)</span>
-          <div className="umbral-right">
-            <span className="umbral-valor">Sin umbral</span>
-            <span className="estado-chip estado-pendiente">PENDIENTE</span>
-          </div>
-        </div>
       </div>
     </section>
   )
