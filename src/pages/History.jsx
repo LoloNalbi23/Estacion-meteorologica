@@ -37,6 +37,14 @@ const GRAFICOS = [
   { key: 'presion', label: 'PRESIÓN (OPCIONAL)', color: '#A78BFA', unit: ' hPa' },
 ]
 
+const CLASE_COLUMNA = {
+  temperatura: 'temp',
+  humedad: 'hum',
+  velocidad_viento: 'wind',
+  co_concentracion: 'co',
+  presion: 'pres',
+}
+
 // ── Mensajes ──────────────────────────────────────────────────────
 const MSG_VACIO = {
   '1d': 'No hay lecturas de las últimas 24 horas en la base de datos. Cuando el sensor (o el simulador) guarde datos, van a aparecer acá.',
@@ -198,9 +206,11 @@ export default function History() {
   const cargandoActual = datosPeriodo === null && !error
   const datos = datosPeriodo ?? []
   const graficosVisibles = GRAFICOS.filter(
-    cfg => cfg.key !== 'presion' || datos.some(d => d.presion != null)
+    cfg => datos.some(d => d[cfg.key] != null)
   )
-  const mostrarPresionTabla = Boolean(historial24h?.some(reg => reg.presion != null))
+  const columnasTabla = GRAFICOS.filter(
+    cfg => historial24h?.some(reg => reg[cfg.key] != null)
+  )
 
   const labels = (() => {
     if (periodo === '7d') return datos.map(d => formatFecha(d.timestamp))
@@ -238,16 +248,18 @@ export default function History() {
         )}
 
         {/* ── Grilla 2x2 de gráficos de línea ── */}
-        <div className="history-charts-grid">
-          {graficosVisibles.map(cfg => (
-            <ChartPanel
-              key={cfg.key}
-              config={cfg}
-              labels={labels}
-              datos={datos}
-            />
-          ))}
-        </div>
+        {graficosVisibles.length > 0
+          ? <div className="history-charts-grid">
+              {graficosVisibles.map(cfg => (
+                <ChartPanel
+                  key={cfg.key}
+                  config={cfg}
+                  labels={labels}
+                  datos={datos}
+                />
+              ))}
+            </div>
+          : <Aviso tipo="aviso">Hay registros en este período, pero no contienen mediciones disponibles para graficar.</Aviso>}
       </>
     )
   }
@@ -291,11 +303,14 @@ export default function History() {
               <thead>
                 <tr>
                   <th className="th-hora">Hora</th>
-                  <th className="th-temp">Temp (°C)</th>
-                  <th className="th-hum">Humedad (%)</th>
-                  <th className="th-wind">Viento (km/h)</th>
-                  <th className="th-co">CO (ppm)</th>
-                  {mostrarPresionTabla && <th className="th-pres">Presión (hPa)</th>}
+                  {columnasTabla.map(cfg => (
+                    <th key={cfg.key} className={`th-${CLASE_COLUMNA[cfg.key]}`}>
+                      {cfg.key === 'temperatura' ? 'Temp (°C)'
+                        : cfg.key === 'humedad' ? 'Humedad (%)'
+                          : cfg.key === 'velocidad_viento' ? 'Viento (km/h)'
+                            : cfg.key === 'co_concentracion' ? 'CO (ppm)' : 'Presión (hPa)'}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -303,16 +318,16 @@ export default function History() {
                 {[...historial24h].slice(-12).reverse().map((reg, i) => (
                   <tr key={i}>
                     <td className="td-hora">{formatHora(reg.timestamp)}</td>
-                    <td className="td-temp">{reg.temperatura}</td>
-                    <td className="td-hum">{reg.humedad}</td>
-                    <td className="td-wind">{reg.velocidad_viento}</td>
-                    <td className="td-co">{reg.co_concentracion}</td>
-                    {mostrarPresionTabla && <td className="td-pres">{reg.presion ?? '—'}</td>}
+                    {columnasTabla.map(cfg => (
+                      <td key={cfg.key} className={`td-${CLASE_COLUMNA[cfg.key]}`}>
+                        {reg[cfg.key] ?? '—'}
+                      </td>
+                    ))}
                   </tr>
                 ))}
               </tbody>
             </table>
-            {mostrarPresionTabla && <p className="history-table-note">Presión medida por el BME280 (opcional).</p>}
+            {columnasTabla.some(cfg => cfg.key === 'presion') && <p className="history-table-note">Presión medida por el BME280 (opcional).</p>}
           </div>
         )}
     </section>

@@ -158,18 +158,18 @@ function generarAlertas(lectura) {
       hora,
     }))
 
-  // No declarar que todos los valores están OK si falta presión opcional.
+  // No declarar que todos los valores están OK si faltan mediciones.
   if (alertas.length === 0) {
-    const camposObligatorios = [
+    const camposSinDato = [
       'temperatura', 'humedad', 'velocidad_viento', 'co_concentracion',
     ]
-    const sinLectura = camposObligatorios.filter(campo => lectura[campo] == null)
+    const sinLectura = camposSinDato.filter(campo => lectura[campo] == null)
 
     alertas.push({
       tipo:  'info',
       icono: 'ℹ️',
       texto: sinLectura.length
-        ? `No se superaron los umbrales evaluables; faltan lecturas de ${sinLectura.join(', ')}.`
+        ? `No se superaron los umbrales evaluables; no hay datos de ${sinLectura.join(', ')}.`
         : lectura.presion == null
           ? 'Las variables con lectura están dentro de rango; no llegó la presión opcional del BME280.'
           : 'Todos los valores están dentro de los rangos configurados.',

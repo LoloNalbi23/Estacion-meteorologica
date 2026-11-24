@@ -22,11 +22,21 @@ const UNA_HORA_MS = 60 * 60 * 1000
 const MAX_DOCS = 500
 const MAX_HISTORIAL = 300
 
-// Documento de Firestore → objeto normal de JavaScript.
-// El timestamp de Firestore pasa a ser un Date común.
+const CAMPOS_MEDICION = [
+  'temperatura', 'humedad', 'velocidad_viento', 'co_concentracion', 'presion',
+]
+
+// Documento de Firestore → objeto normal de JavaScript. Los campos que no
+// llegaron se normalizan a null para que tarjetas, tablas y gráficos los traten
+// igual que una lectura explícitamente nula. El timestamp pasa a ser Date.
 const convertir = (docSnap) => {
   const d = docSnap.data()
-  return { id: docSnap.id, ...d, timestamp: d.timestamp?.toDate?.() ?? null }
+  return {
+    id: docSnap.id,
+    ...d,
+    ...Object.fromEntries(CAMPOS_MEDICION.map((campo) => [campo, d[campo] ?? null])),
+    timestamp: d.timestamp?.toDate?.() ?? null,
+  }
 }
 
 // Las N lecturas más recientes (la más nueva primero).
@@ -85,6 +95,28 @@ export async function getHistorial24h() {
   )
   const snap = await getDocs(q)
   return snap.docs.map(convertir).reverse()
+}
+
+// Escucha el historial acotado a las últimas 24 h. El límite evita escuchar
+// toda la colección y mantiene el mismo máximo que la consulta de historial.
+// Devuelve una función para desuscribirse al desmontar la pantalla.
+export function escucharHistorial24h(callback, onError) {
+  const desde = Timestamp.fromMillis(Date.now() - 24 * UNA_HORA_MS)
+  const q = query(
+    collection(db, 'lecturas'),
+    where('timestamp', '>=', desde),
+    orderBy('timestamp', 'desc'),
+    limit(MAX_HISTORIAL)
+  )
+
+  return onSnapshot(
+    q,
+    (snap) => callback(snap.docs.map(convertir).reverse()),
+    (error) => {
+      console.error('Error escuchando el historial de lecturas:', error)
+      if (onError) onError(error)
+    }
+  )
 }
 
 // ── Promedios por período (semana y año) ──────────────────────────
