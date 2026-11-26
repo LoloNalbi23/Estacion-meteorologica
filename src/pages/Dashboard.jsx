@@ -7,7 +7,7 @@ import {
 import { Line } from 'react-chartjs-2'
 
 import { formatHora } from '../data/mockData'
-import { escucharLecturaActual, escucharHistorial24h } from '../data/firebaseService'
+import { escucharHistorial24h } from '../data/firebaseService'
 import './Dashboard.css'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend)
@@ -60,48 +60,60 @@ export default function Dashboard() {
   const [lectura, setLectura] = useState(null)
   const [historial, setHistorial] = useState([])
   const [cargando, setCargando] = useState(true)
-  const [error, setError] = useState(false)
+  const [error, setError] = useState(null)
+  const [intentoConexion, setIntentoConexion] = useState(0)
 
   useEffect(() => {
-    let lecturasListas = false
-    let historialListo = false
-    const actualizarCarga = () => {
-      if (lecturasListas && historialListo) setCargando(false)
-    }
-    const alError = (err) => {
-      console.error('Error consultando datos del Dashboard:', err)
-      setError(true)
-      setCargando(false)
-    }
-    const dejarDeEscucharLectura = escucharLecturaActual((nuevaLectura) => {
-      setLectura(nuevaLectura)
-      lecturasListas = true
-      actualizarCarga()
-    }, alError)
-    const dejarDeEscucharHistorial = escucharHistorial24h((nuevasLecturas) => {
-      setHistorial(nuevasLecturas)
-      historialListo = true
-      actualizarCarga()
-    }, alError)
-    return () => {
-      dejarDeEscucharLectura()
-      dejarDeEscucharHistorial()
-    }
-  }, [])
+    const dejarDeEscuchar = escucharHistorial24h(
+      (nuevasLecturas) => {
+        setHistorial(nuevasLecturas)
+        setLectura(nuevasLecturas[nuevasLecturas.length - 1] ?? null)
+        setError(null)
+        setCargando(false)
+      },
+      (errorFirestore) => {
+        console.error('Error consultando datos del Dashboard:', errorFirestore)
+        setError(errorFirestore)
+        setCargando(false)
+      }
+    )
 
-  // ── El if va ANTES de usar lectura, pero DESPUÉS de los hooks ────
-  if (cargando) return <p style={{ color: '#8B949E', padding: '2rem' }}>Cargando datos...</p>
-  if (error) return <p style={{ color: '#F87171', padding: '2rem' }}>No se pudieron consultar los datos. Revisá la conexión con Firestore.</p>
+    return () => dejarDeEscuchar()
+  }, [intentoConexion])
+
+  if (cargando) return <p style={{ color: '#8B949E', padding: '2rem' }}>Cargando datos desde la base de datos...</p>
+  if (error) {
+    return (
+      <section>
+        <h2 className="dash-section-title">Lectura en Tiempo Real</h2>
+        <div role="alert" style={{ color: '#F87171', padding: '1rem 2rem' }}>
+          <p>No se pudieron cargar las lecturas desde Firestore.</p>
+          <p>{error.code ? `${error.code}: ` : ''}{error.message ?? String(error)}</p>
+          <button
+            type="button"
+            onClick={() => {
+              setError(null)
+              setCargando(true)
+              setIntentoConexion((intento) => intento + 1)
+            }}
+          >
+            Reintentar
+          </button>
+        </div>
+      </section>
+    )
+  }
   if (!lectura || historial.length === 0) return <p style={{ color: '#8B949E', padding: '2rem' }}>Todavía no hay lecturas en la base de datos.</p>
 
-  // A partir de acá lectura e historial están disponibles.
-  // penultima = último registro guardado del historial (la hora más
-  // reciente ya "cerrada"); lectura = snapshot en vivo de ahora mismo.
-  const penultima = historial[historial.length - 1] || historial[0]
-  const tienePresion = lectura.presion != null || historial.some(d => d.presion != null)
+  // El historial viene ordenado de más viejo a más nuevo; excluimos la lectura
+  // actual para comparar las tarjetas con la lectura anterior.
+  const penultima = historial.length > 1 ? historial[historial.length - 2] : null
   const variablesDisponibles = Object.entries(VARIABLES)
-    .filter(([key]) => key !== 'presion' || tienePresion)
-  const config = VARIABLES[varActiva] ?? VARIABLES.temperatura
+    .filter(([, variable]) => historial.some(d => d[variable.key] != null))
+  const variableActiva = variablesDisponibles.some(([key]) => key === varActiva)
+    ? varActiva
+    : variablesDisponibles[0]?.[0]
+  const config = VARIABLES[variableActiva] ?? VARIABLES.temperatura
 
   const chartData = {
     labels: historial.map(d => formatHora(d.timestamp)),
@@ -151,38 +163,39 @@ export default function Dashboard() {
   const tarjetas = [
     {
       label: 'TEMPERATURA', valor: lectura.temperatura, unidad: ' °C',
-      delta: calcDeltaSeguro(lectura.temperatura, penultima.temperatura),
+      delta: calcDeltaSeguro(lectura.temperatura, penultima?.temperatura),
       unidadDelta: '°C', colorClass: 'color-temp', icono: '🌡️'
     },
     {
       label: 'HUMEDAD', valor: lectura.humedad, unidad: ' %',
-      delta: calcDeltaSeguro(lectura.humedad, penultima.humedad),
+      delta: calcDeltaSeguro(lectura.humedad, penultima?.humedad),
       unidadDelta: '%', colorClass: 'color-hum', icono: '💧'
     },
     {
       label: 'VELOCIDAD DEL VIENTO', valor: lectura.velocidad_viento, unidad: ' km/h',
-      delta: calcDeltaSeguro(lectura.velocidad_viento, penultima.velocidad_viento),
+      delta: calcDeltaSeguro(lectura.velocidad_viento, penultima?.velocidad_viento),
       unidadDelta: ' km/h', colorClass: 'color-wind', icono: '🌬️'
     },
     {
       label: 'CO (MONÓXIDO DE CARBONO)', valor: lectura.co_concentracion, unidad: ' ppm',
-      delta: calcDeltaSeguro(lectura.co_concentracion, penultima.co_concentracion),
+      delta: calcDeltaSeguro(lectura.co_concentracion, penultima?.co_concentracion),
       unidadDelta: ' ppm', colorClass: 'color-co', icono: '🫧'
     },
   ]
-  if (lectura.presion != null) {
-    tarjetas.push({
-      label: 'PRESIÓN ATM.', valor: lectura.presion, unidad: ' hPa',
-      delta: calcDeltaSeguro(lectura.presion, penultima.presion),
-      unidadDelta: ' hPa', colorClass: 'color-pres', icono: '🌀'
-    })
-  }
+  tarjetas.push({
+    label: 'PRESIÓN ATM.', valor: lectura.presion, unidad: ' hPa',
+    delta: calcDeltaSeguro(lectura.presion, penultima?.presion),
+    unidadDelta: ' hPa', colorClass: 'color-pres', icono: '🌀'
+  })
+  const tarjetasDisponibles = tarjetas.filter(t => t.valor != null)
 
   return (
     <section>
       <h2 className="dash-section-title">Lectura en Tiempo Real</h2>
       <div className="dash-metrics-grid">
-        {tarjetas.map(t => <MetricCard key={t.label} {...t} />)}
+        {tarjetasDisponibles.length > 0
+          ? tarjetasDisponibles.map(t => <MetricCard key={t.label} {...t} />)
+          : <p style={{ color: '#8B949E', padding: '1rem' }}>La última lectura no contiene mediciones disponibles.</p>}
       </div>
       <div className="dash-chart-panel">
         <div className="dash-chart-header">
@@ -191,7 +204,7 @@ export default function Dashboard() {
             {variablesDisponibles.map(([key, cfg]) => (
               <button
                 key={key}
-                className={`chart-tab ${varActiva === key ? 'active' : ''}`}
+                className={`chart-tab ${variableActiva === key ? 'active' : ''}`}
                 onClick={() => setVarActiva(key)}
               >
                 {cfg.label}
@@ -200,7 +213,9 @@ export default function Dashboard() {
           </div>
         </div>
         <div className="dash-chart-wrapper">
-          <Line data={chartData} options={chartOptions} />
+          {variablesDisponibles.length > 0
+            ? <Line data={chartData} options={chartOptions} />
+            : <p style={{ color: '#8B949E', padding: '1rem' }}>No hay variables con datos para graficar.</p>}
         </div>
       </div>
     </section>

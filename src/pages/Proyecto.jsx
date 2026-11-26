@@ -15,7 +15,7 @@ const PASOS = [
     titleClass: 'title-sensor',
     icono: '📡',
     titulo: 'Sensores',
-    desc: 'Captura de temperatura, humedad relativa, velocidad del viento y concentración de monóxido de carbono; presión opcional',
+    desc: 'Puede enviar temperatura, humedad relativa, viento y CO; cada medición se acepta por separado y la presión del BME280 es opcional',
   },
   {
     num: 2,
@@ -23,7 +23,7 @@ const PASOS = [
     titleClass: 'title-esp32',
     icono: '🔧',
     titulo: 'ESP32',
-    desc: 'Microcontrolador: lee sensores, convierte señales analógicas a digitales y envía por WiFi',
+    desc: 'Microcontrolador: toma las mediciones disponibles y envía una lectura parcial por WiFi cuando algún sensor no responde',
   },
   {
     num: 3,
@@ -31,7 +31,7 @@ const PASOS = [
     titleClass: 'title-flask',
     icono: '🖥️',
     titulo: 'API Flask',
-    desc: 'Backend Python: recibe datos vía HTTP/REST, valida y procesa lecturas antes de almacenar',
+    desc: 'Backend Python: recibe POST /api/lecturas, valida cada valor recibido y guarda la lectura con fecha del servidor',
   },
   {
     num: 4,
@@ -39,7 +39,7 @@ const PASOS = [
     titleClass: 'title-db',
     icono: '🗄️',
     titulo: 'Base de Datos',
-    desc: 'Almacenamiento persistente: guarda series temporales históricas para análisis futuro',
+    desc: 'Firestore almacena las mediciones disponibles como series históricas; los campos que faltan se mantienen sin dato',
   },
   {
     num: 5,
@@ -47,7 +47,7 @@ const PASOS = [
     titleClass: 'title-react',
     icono: '🌐',
     titulo: 'Frontend React',
-    desc: 'Interfaz web: consulta la API, renderiza gráficos en tiempo real y muestra alertas',
+    desc: 'React consulta Firestore directamente: el Dashboard y las alertas escuchan cambios en vivo, y el historial consulta los períodos',
   },
   {
     num: 6,
@@ -55,25 +55,25 @@ const PASOS = [
     titleClass: 'title-user',
     icono: '🖥',
     titulo: 'Usuario',
-    desc: 'Visualiza datos, configura alertas y toma decisiones basadas en la información meteorológica',
+    desc: 'Visualiza las mediciones disponibles, los gráficos históricos y las alertas configuradas',
   },
 ]
 
 // ── Datos de la sección EPyS (Entradas / Procesos / Salidas) ─────
 const ENTRADAS = [
   'Temperatura y humedad (DHT22)',
-  'Anemómetro con salida de pulsos, convertido a km/h en el ESP32',
-  'Monóxido de carbono (MQ-7, ppm)',
+  'Anemómetro: velocidad enviada en km/h tras calibrar su salida',
+  'Monóxido de carbono (MQ-7, ppm; no mide CO₂)',
   'Presión atmosférica opcional (BME280, hPa)',
 ]
 
 const PROCESOS = [
   'Lectura periódica de sensores',
-  'Conversión analógico-digital',
-  'Validación de rangos',
-  'Transmisión WiFi (HTTP/REST)',
-  'Recepción en API Flask',
-  'Almacenamiento en BD',
+  'Lectura y calibración según el sensor instalado',
+  'Envío de los campos que tengan medición',
+  'Transmisión WiFi (HTTP POST)',
+  'Validación de valores en Flask',
+  'Almacenamiento en Firebase Firestore',
   'Generación de alertas',
   'Cálculo de promedios',
 ]
@@ -83,8 +83,8 @@ const SALIDAS = [
   'Gráficos históricos',
   'Tabla de registros',
   'Alertas y notificaciones',
-  'Reportes exportables',
-  'API pública de datos',
+  'Lecturas parciales cuando falta un sensor',
+  'Ingreso de datos para el ESP32 mediante POST',
 ]
 
 // ── Componente principal ──────────────────────────────────────────

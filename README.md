@@ -1,122 +1,138 @@
-# 🌦️ Estación Meteorológica
+# Estación Meteorológica
 
-Dashboard web para monitorear temperatura, humedad relativa, velocidad del viento y concentración de monóxido de carbono, con historial y alertas por umbrales. La presión atmosférica del BME280 es opcional.
+Aplicación para visualizar mediciones de una estación meteorológica. El ESP32 envía lecturas a Flask; Flask valida y guarda los valores recibidos en Firebase Firestore. React consulta Firestore directamente para mostrar el Dashboard, el historial y las alertas.
 
-> **Estado:** en desarrollo. El ESP32/simulador envía lecturas a Flask; Flask las valida y guarda en Firestore. El frontend consulta Firestore.
+La aplicación no consulta APIs meteorológicas externas.
 
-## ✨ Funcionalidades
+## Componentes
 
-- **Dashboard:** lectura actual de temperatura, humedad, viento y CO; presión opcional.
-- **Historial:** gráficos por día (24 h), semana (7 días) y año (12 meses) con Chart.js.
-- **Alertas:** avisos cuando una variable supera los umbrales configurados.
-- **Proyecto:** explicación de la arquitectura ESP32 → Flask → React.
+- **ESP32 y sensores:** envían las mediciones que estén disponibles.
+- **API Flask:** recibe lecturas en `POST /api/lecturas`, valida sus valores y las guarda en Firestore.
+- **Firebase Firestore:** almacena las lecturas con la fecha asignada por el servidor.
+- **Frontend React:** escucha los últimos datos en el Dashboard y Alertas; consulta los períodos del Historial y muestra errores o estados vacíos si no puede cargar datos.
+- **Simulador HTTP:** permite probar el envío a Flask sin el hardware. Sus valores son ficticios.
 
-## 🧰 Tecnologías
+## Variables y contrato de lecturas
 
-- [React 18](https://react.dev/) + [Vite 5](https://vitejs.dev/)
-- [React Router](https://reactrouter.com/)
-- [Chart.js](https://www.chartjs.org/) con `react-chartjs-2`
-- Flask (Python) + Firebase/Firestore + ESP32
-
-## 📡 Contrato de lecturas
-
-`POST /api/lecturas` recibe estos campos obligatorios:
+Un documento puede incluir cualquier combinación de estas mediciones. Un campo se puede omitir o enviar como `null` cuando no haya lectura. Se guarda solamente cuando trae un valor numérico válido, y cada documento debe contener al menos una medición.
 
 | Campo | Unidad | Sensor / significado |
 |---|---|---|
 | `temperatura` | °C | DHT22 |
 | `humedad` | % relativa | DHT22 |
-| `velocidad_viento` | km/h | Anemómetro; el ESP32 envía la velocidad ya convertida |
-| `co_concentracion` | ppm | CO medido por MQ-7; no representa CO₂ ni un índice general de calidad del aire |
+| `velocidad_viento` | km/h | Anemómetro; el valor debe llegar ya convertido |
+| `co_concentracion` | ppm | CO medido por MQ-7; no representa CO₂ ni un índice de calidad del aire |
+| `presion` | hPa | BME280, opcional |
 
-`presion` (hPa) es opcional y se usa cuando se incorpora el BME280. Flask asigna `timestamp` en UTC al recibir cada lectura. El simulador omite presión por defecto; para simular también el BME280, usar `SIMULAR_PRESION=true` en `.env`.
-
-Los límites de alerta se comparan como rangos inclusivos: se alerta solo cuando el valor queda por debajo del mínimo o por encima del máximo.
-
-| Variable | Mínimo | Máximo |
-|---|---:|---:|
-| Temperatura | -15 °C | 50 °C |
-| Humedad relativa | 0 % | 100 % |
-| Velocidad del viento | 0 km/h | 450 km/h |
-| CO (MQ-7) | 0 ppm | 25 ppm |
-| Presión (BME280, opcional) | 870 hPa | 1085 hPa |
-
-Estos umbrales de alerta son independientes de los rangos amplios que Flask usa para rechazar datos inválidos.
-
-Ejemplo del cuerpo enviado por el ESP32 (se puede omitir `presion`):
+Ejemplo con algunas variables ausentes:
 
 ```json
 {
   "temperatura": 24.3,
-  "humedad": 58.2,
+  "humedad": null,
   "velocidad_viento": 12.5,
-  "co_concentracion": 18.0,
-  "presion": 1013.2
+  "co_concentracion": null
 }
 ```
 
-`co_concentracion` debe ser una estimación calibrada en ppm; no se debe enviar directamente el valor crudo del ADC del MQ-7 con esa unidad.
+`timestamp` lo asigna Flask en UTC. No se deben enviar valores ficticios para reemplazar mediciones faltantes, ni el valor crudo del ADC del MQ-7 como si fueran ppm: la concentración de CO requiere calibración.
 
-## 🚀 Instalación y uso
+Flask aplica rangos amplios para descartar datos inválidos: temperatura `-40..85 °C`, humedad `0..100 %`, viento `0..500 km/h`, CO `0..500 ppm` y presión `300..1100 hPa`. Estos límites de validación no son los umbrales de alerta.
+
+## Alertas configuradas
+
+La interfaz compara las mediciones disponibles con estos límites. Si una variable no llegó, se muestra como **SIN DATO** y no se evalúa.
+
+| Variable | Rango configurado |
+|---|---:|
+| Temperatura | 5–35 °C |
+| Humedad relativa | 10–75 % |
+| Velocidad del viento | hasta 50 km/h |
+| CO (MQ-7) | 0–10 ppm |
+| Presión (BME280) | 1010–1020 hPa |
+
+La lectura de CO del MQ-7 no sustituye una alarma certificada de monóxido de carbono.
+
+## Rutas Flask
+
+| Método y ruta | Función |
+|---|---|
+| `GET /api/estado` | Comprueba que Flask esté activo |
+| `POST /api/lecturas` | Valida una lectura y la guarda en Firestore; requiere `X-API-Key` |
+
+No hay rutas GET de lecturas: el frontend usa el SDK de Firebase para leer Firestore directamente. El simulador también solo envía por POST, por eso no hace falta añadir rutas GET para lectura actual o historial.
+
+## Configuración y ejecución
 
 ### Requisitos
 
-- [Node.js](https://nodejs.org/) 18 o superior
-- Credenciales de Firebase para el frontend y Flask
+- Node.js 18 o superior para la aplicación; el simulador usa `--env-file` y requiere Node.js 20.6 o superior.
+- Python y las dependencias de `requirements.txt` para Flask.
+- Un proyecto Firebase con Firestore y una clave de cuenta de servicio para Flask.
 
-### Pasos
+### Frontend
 
 ```bash
-# 1. Clonar el repositorio
-git clone https://github.com/LoloNalbi23/Estacion-meteorologica.git
-cd Estacion-meteorologica
-
-# 2. Instalar dependencias
 npm install
-
-# 3. Configurar las variables de entorno de Firebase y Flask
 cp .env.example .env
-# completar las variables necesarias; FIREBASE_CREDENTIALS apunta a la clave Admin
+```
 
-# 4. Iniciar en modo desarrollo
+Completar en `.env` las variables `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID` y `VITE_FIREBASE_APP_ID`. Luego iniciar:
+
+```bash
 npm run dev
 ```
 
-Abrir la URL local que indique Vite (normalmente `http://localhost:5173`).
+Para generar los archivos que Flask sirve en producción:
 
-### Scripts disponibles
-
-| Comando | Descripción |
-|---|---|
-| `npm run dev` | Servidor de desarrollo |
-| `npm run build` | Build de producción en `dist/` |
-| `npm run preview` | Previsualiza el build |
-| `npm run simulador` | Envía lecturas ficticias a `API_URL` cada 5 minutos |
-| `npm run simulador-http -- 1` | Envía lecturas ficticias cada 1 minuto |
-
-## 📁 Estructura
-
-```
-Estacion-meteorologica/
-├── src/
-│   ├── components/   # Navbar
-│   ├── data/         # firebaseService.js (Firestore) y mockData.js (datos de prueba)
-│   ├── pages/        # Dashboard, History, Alertas, Proyecto
-│   ├── App.jsx
-│   └── main.jsx
-├── routes/           # Rutas Flask, incluida la recepción de lecturas
-├── index.html
-├── vite.config.js
-└── package.json
+```bash
+npm run build
 ```
 
-## 🗺️ Roadmap
+### Flask
 
-- [ ] Integración del ESP32 con sensores reales
-- [ ] Calibrar la conversión del anemómetro a km/h
-- [ ] Calibrar el MQ-7 para estimar CO en ppm y definir su umbral de alerta
-- [ ] Incorporar el BME280 como fuente opcional de presión
+Instalar las dependencias Python y completar en `.env`:
 
-## 📄 Licencia
+- `FIREBASE_CREDENTIALS`: ruta a la clave JSON de Firebase Admin.
+- `API_KEY_SENSOR`: clave que debe enviar el ESP32 o el simulador en el encabezado `X-API-Key`.
+
+Iniciar Flask desde la carpeta del proyecto:
+
+```bash
+python app.py
+```
+
+El servidor local escucha en el puerto `5000`. Para recibir datos desde fuera de la computadora, Flask debe estar desplegado en una URL accesible por el ESP32.
+
+### Simulador
+
+Configurar en `.env` la URL completa del endpoint, por ejemplo `API_URL=https://tu-servidor/api/lecturas`, y el mismo `API_KEY_SENSOR` que valida Flask. Ejecutar:
+
+```bash
+npm run simulador       # envía inmediatamente y luego cada 5 minutos
+npm run simulador -- 1  # cada 1 minuto
+```
+
+Por defecto omite presión. Para incluir una presión ficticia, configurar `SIMULAR_PRESION=true`. Los datos del simulador no son mediciones de los sensores reales.
+
+## Estructura principal
+
+```text
+src/                 Frontend React y consultas a Firestore
+routes/lecturas.py   Recepción y validación Flask de lecturas
+app.py               Inicialización de Firebase y servidor Flask
+scripts/simulador.mjs Simulador de POST HTTP
+firmware/             Base de firmware ESP32
+requirements.txt      Dependencias Python
+```
+
+## Pendiente de hardware
+
+- Completar y probar el firmware con el modelo real de ESP32 y el cableado elegido.
+- Definir la calibración del anemómetro para convertir sus pulsos a km/h.
+- Definir el circuito de calefacción y calibración del MQ-7 para estimar CO en ppm.
+- Incorporar el BME280 si se decide medir presión.
+
+## Licencia
 
 Distribuido bajo licencia [MIT](LICENSE).
