@@ -36,6 +36,9 @@ DIST_DIR = os.path.join(BASE_DIR, 'dist')
 
 app = Flask(__name__, static_folder=None)
 app.json.ensure_ascii = False  # que las tildes se vean bien en las respuestas
+# Una lectura del ESP32 pesa menos de 200 bytes. Cualquier cuerpo más grande
+# se rechaza (HTTP 413) antes de leerlo.
+app.config['MAX_CONTENT_LENGTH'] = 4 * 1024
 app.register_blueprint(lecturas_bp)
 
 

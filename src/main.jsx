@@ -17,7 +17,7 @@ document.documentElement.style.setProperty('--cielo-h', String(leerTonoGuardado(
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     {/* BrowserRouter habilita React Router en toda la app */}
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <EstacionProvider>
         <TemaProvider>
           <App />

@@ -94,8 +94,11 @@
   gap: 0.25rem;
 }
 
-.delta-up   { color: var(--ok); }
-.delta-down { color: var(--danger); }
+/* Subir o bajar no es bueno ni malo por sí mismo (un CO que sube no es
+   "verde"): la flecha indica la dirección y el color se mantiene neutro.
+   Si un valor es preocupante lo señala la página de Alertas. */
+.delta-up,
+.delta-down { color: var(--text-primary); }
 .delta-same { color: var(--text-secondary); }
 .delta-none { color: var(--text-muted); }
 

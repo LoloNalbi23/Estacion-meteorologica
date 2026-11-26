@@ -14,6 +14,8 @@ import './Dashboard.css'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend)
 
+const VENTANA_MS = 24 * 60 * 60 * 1000
+
 // El color de cada línea sale del tema activo (useTema().coloresGrafico).
 const VARIABLES = {
   temperatura: { label: 'Temperatura', unit: '°C',   key: 'temperatura' },
@@ -66,17 +68,29 @@ function MetricCard({ label, valor, unidad, delta, unidadDelta, colorClass, icon
 export default function Dashboard() {
   const { coloresGrafico } = useTema()
   const [varActiva, setVarActiva] = useState('temperatura')
-  const [lectura, setLectura] = useState(null)
-  const [historial, setHistorial] = useState([])
+  const [lecturasRecibidas, setLecturasRecibidas] = useState([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
   const [intentoConexion, setIntentoConexion] = useState(0)
+  const [ahora, setAhora] = useState(() => Date.now())
+
+  // La consulta a Firestore fija su "desde" al abrir la página. Si la pantalla
+  // queda encendida todo el día (por ejemplo, en un monitor junto a la
+  // estación), se filtra acá para que "Últimas 24 horas" siga siendo cierto.
+  useEffect(() => {
+    const timer = setInterval(() => setAhora(Date.now()), 60 * 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  const desde = ahora - VENTANA_MS
+  const historial = lecturasRecibidas.filter(d => d.timestamp && d.timestamp.getTime() >= desde)
+  const lectura = historial[historial.length - 1] ?? null
 
   useEffect(() => {
     const dejarDeEscuchar = escucharHistorial24h(
       (nuevasLecturas) => {
-        setHistorial(nuevasLecturas)
-        setLectura(nuevasLecturas[nuevasLecturas.length - 1] ?? null)
+        setLecturasRecibidas(nuevasLecturas)
+        setAhora(Date.now())
         setError(null)
         setCargando(false)
       },

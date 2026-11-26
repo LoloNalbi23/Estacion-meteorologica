@@ -1,3 +1,4 @@
+import hmac
 import os
 from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify
@@ -21,9 +22,12 @@ CAMPOS_MEDICION = {
 
 @lecturas_bp.post('/api/lecturas')
 def crear_lectura():
-    # 1. Autenticación: la clave debe coincidir con la del .env
+    # 1. Autenticación: la clave debe coincidir con la del .env.
+    # compare_digest tarda lo mismo acierte o no, así nadie puede adivinar la
+    # clave carácter por carácter midiendo cuánto tarda la respuesta.
     clave = os.environ.get('API_KEY_SENSOR')
-    if not clave or request.headers.get('X-API-Key') != clave:
+    recibida = request.headers.get('X-API-Key', '')
+    if not clave or not hmac.compare_digest(recibida.encode(), clave.encode()):
         return jsonify(error='No autorizado'), 401
 
     # 2. El cuerpo tiene que ser un JSON válido

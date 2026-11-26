@@ -4,6 +4,8 @@ Aplicación para visualizar mediciones de una estación meteorológica. El ESP32
 
 La aplicación no consulta APIs meteorológicas externas.
 
+**En producción:** [estacionmeteorologica.pythonanywhere.com](https://estacionmeteorologica.pythonanywhere.com)
+
 ## Componentes
 
 - **ESP32 y sensores:** envían cada 5 minutos las mediciones que estén disponibles.
@@ -104,6 +106,25 @@ python app.py
 
 El servidor local escucha en el puerto `5000`. Para recibir datos desde fuera de la computadora, Flask debe estar desplegado en una URL accesible por el ESP32.
 
+Flask rechaza con `401` las lecturas sin la clave correcta, con `400` las que traen valores inválidos o fuera de rango y con `413` los cuerpos de más de 4 KB.
+
+### Tests
+
+Los tests de `POST /api/lecturas` no necesitan Firebase: reemplazan la base por una en memoria.
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+### Actualizar el sitio publicado
+
+El sitio corre en PythonAnywhere y sirve los archivos de `dist/` que están en el repositorio. Después de subir cambios a `main` (con `dist/` regenerada con `npm run build`):
+
+1. Abrir una consola Bash en PythonAnywhere y, en la carpeta del proyecto, ejecutar `git pull`.
+2. En la pestaña **Web**, tocar **Reload**.
+3. Comprobar que [`/api/estado`](https://estacionmeteorologica.pythonanywhere.com/api/estado) responda `{"estado": "ok"}`.
+
 ### Simulador
 
 Configurar en `.env` la URL completa del endpoint, por ejemplo `API_URL=https://tu-servidor/api/lecturas`, y el mismo `API_KEY_SENSOR` que valida Flask. Ejecutar:
@@ -113,7 +134,7 @@ npm run simulador       # envía inmediatamente y luego cada 5 minutos
 npm run simulador -- 1  # cada 1 minuto
 ```
 
-Por defecto omite presión. Para incluir una presión ficticia, configurar `SIMULAR_PRESION=true`. Los datos del simulador no son mediciones de los sensores reales.
+Por defecto omite presión. Para incluir una presión ficticia, configurar `SIMULAR_PRESION=true`. Los datos del simulador no son mediciones de los sensores reales. Flask los guarda en el mismo Firebase que usa la estación (aunque el servidor sea local), así que se ven en la web mezclados con las lecturas reales; el simulador lo advierte al arrancar.
 
 ### Datos aleatorios directamente en Firestore
 
@@ -165,6 +186,7 @@ scripts/simulador.mjs Simulador de POST HTTP
 scripts/datos_random.py Carga de lecturas ficticias en Firestore
 firmware/             Base de firmware ESP32
 requirements.txt      Dependencias Python
+tests/                Tests de la recepción de lecturas (pytest)
 firestore.indexes.json Índices compuestos para los promedios del Historial
 ```
 

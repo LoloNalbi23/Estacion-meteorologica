@@ -11,6 +11,14 @@ if (!URL || !API_KEY) {
   process.exit(1)
 }
 
+// Flask guarda todo en el Firebase de FIREBASE_CREDENTIALS, el mismo que usan
+// los sensores, sea el servidor publicado o uno local: estas lecturas
+// ficticias se van a ver en la web mezcladas con las reales.
+console.warn(
+  'ATENCIÓN: las lecturas del simulador son ficticias y se guardan en la misma ' +
+  'base de Firebase que las de la estación; se van a ver en la web junto a las reales.'
+)
+
 // Valores ficticios para probar el contrato; no son mediciones del MQ-7.
 const estado = {
   temperatura: 24,
