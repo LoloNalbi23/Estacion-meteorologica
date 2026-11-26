@@ -1,12 +1,38 @@
 // =============================================================
 // Navbar.jsx — Barra de navegación superior fija
-// Contiene: logo, título del proyecto, links a las 4 rutas,
-// indicador de estado "En línea" y hora de última actualización
+// Contiene: logo, título del proyecto, links a las 4 rutas y el estado
+// de la estación según la última lectura REAL guardada en Firestore.
 // =============================================================
 
 import { NavLink } from 'react-router-dom'
 import { useState, useEffect } from 'react'
+import { useEstacion } from '../contexto/EstacionContext'
+import { useTema } from '../temas/TemaContext'
+import { TEMAS } from '../temas/temas'
+import { formatHora, formatFecha } from '../data/formato'
 import './Navbar.css'
+
+// El ESP32 envía una lectura cada 5 minutos. Si pasan más de 15 minutos
+// (3 envíos perdidos) se considera que la estación no está mandando datos.
+const MINUTOS_EN_LINEA = 15
+
+// Traduce la última lectura a un estado visible: clase CSS + textos.
+function estadoEstacion(lectura, error, ahora) {
+  if (error) return { clase: 'error', texto: 'Sin conexión con Firebase', detalle: '' }
+  if (lectura === undefined) return { clase: 'cargando', texto: 'Conectando…', detalle: '' }
+  if (lectura === null || !lectura.timestamp) {
+    return { clase: 'inactiva', texto: 'Sin lecturas todavía', detalle: '' }
+  }
+
+  const fecha = lectura.timestamp
+  const esHoy = fecha.toDateString() === new Date(ahora).toDateString()
+  const detalle = `Última lectura: ${esHoy ? '' : `${formatFecha(fecha)} `}${formatHora(fecha)}`
+  const minutos = (ahora - fecha.getTime()) / 60000
+
+  return minutos <= MINUTOS_EN_LINEA
+    ? { clase: 'en-linea', texto: 'Estación en línea', detalle }
+    : { clase: 'inactiva', texto: 'Sin datos recientes', detalle }
+}
 
 // ── Íconos SVG inline (sin dependencia extra) ─────────────────────
 
@@ -47,45 +73,47 @@ const IconAlert = () => (
 
 // Ícono nube (logo)
 const IconCloud = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="#38BDF8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="22" height="22">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="22" height="22">
     <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9z" />
   </svg>
 )
 
-// Ícono refresh
-const IconRefresh = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
-    <polyline points="23 4 23 10 17 10" />
-    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-  </svg>
-)
+// ── Selector de estética (Original / Papel / Cielo) ───────────────
+function SelectorTema() {
+  const { tema, setTema } = useTema()
+  return (
+    <div className="selector-tema" role="group" aria-label="Estética">
+      <span className="selector-tema-label">Estética</span>
+      {TEMAS.map((t) => (
+        <button
+          key={t.id}
+          type="button"
+          className="selector-tema-opcion"
+          aria-pressed={tema === t.id}
+          title={t.descripcion}
+          onClick={() => setTema(t.id)}
+        >
+          {t.nombre}
+        </button>
+      ))}
+    </div>
+  )
+}
 
 // ── Componente principal ──────────────────────────────────────────
 export default function Navbar() {
-  // Redondea "hacia abajo" a la hora en punto (minutos y segundos a 0),
-  // mismo criterio que usa el historial de Firebase — así "Última
-  // actualización" siempre muestra algo prolijo como 14:00, nunca 14:33.
-  const redondearHora = (fecha) => {
-    const d = new Date(fecha)
-    d.setMinutes(0, 0, 0)
-    return d
-  }
+  // Última lectura compartida por toda la app (ver EstacionContext)
+  const { lectura, error } = useEstacion()
+  const [ahora, setAhora] = useState(() => Date.now())
 
-  // Estado para la hora en punto mostrada
-  const [hora, setHora] = useState(redondearHora(new Date()))
-
-  // No hace falta re-chequear cada segundo si igual se muestra
-  // redondeado a la hora — con revisar cada minuto alcanza para
-  // detectar el cambio de hora en punto.
+  // Recalcula cada 30 s para que el estado pase a "Sin datos recientes"
+  // aunque no llegue ninguna lectura nueva.
   useEffect(() => {
-    const timer = setInterval(() => setHora(redondearHora(new Date())), 60 * 1000)
-    return () => clearInterval(timer) // limpia al desmontar
+    const timer = setInterval(() => setAhora(Date.now()), 30 * 1000)
+    return () => clearInterval(timer)
   }, [])
 
-  // Formatea la hora como "HH:MM" (siempre en punto, sin segundos)
-  const horaStr = hora.toLocaleTimeString('es-AR', {
-    hour: '2-digit', minute: '2-digit'
-  })
+  const estado = estadoEstacion(lectura, error, ahora)
 
   return (
     <header className="navbar">
@@ -98,18 +126,19 @@ export default function Navbar() {
           </div>
           <div className="navbar-title-group">
             <span className="navbar-title">Estación Meteorológica</span>
-            <span className="navbar-subtitle">ESP32 · API Flask · React · SQLite</span>
+            <span className="navbar-subtitle">Sensores ESP32 → Firebase</span>
           </div>
         </NavLink>
 
-        {/* Indicador de estado y reloj */}
-        <div className="navbar-status">
-          <span className="status-dot" />
-          <span className="status-online">En línea</span>
-          <span className="status-time">Última actualización: {horaStr}</span>
-          <button className="btn-refresh" title="Actualizar datos" onClick={() => setHora(redondearHora(new Date()))}>
-            <IconRefresh />
-          </button>
+        <div className="navbar-acciones">
+          {/* Estado de la estación según la última lectura real */}
+          <div className={`navbar-status estado-${estado.clase}`} role="status">
+            <span className="status-dot" />
+            <span className="status-texto">{estado.texto}</span>
+            {estado.detalle && <span className="status-time">{estado.detalle}</span>}
+          </div>
+
+          <SelectorTema />
         </div>
       </div>
 

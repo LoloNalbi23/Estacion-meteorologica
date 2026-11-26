@@ -10,18 +10,18 @@
 }
 
 .proyecto-main-title {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-data);
   font-size: 0.8rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: #8B949E;
+  letter-spacing: var(--label-tracking);
+  text-transform: var(--label-case);
+  color: var(--text-secondary);
   margin-bottom: 0.5rem;
 }
 
 .proyecto-subtitle {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-data);
   font-size: 0.82rem;
-  color: #484F58;
+  color: var(--text-muted);
   max-width: 500px;
   margin: 0 auto;
   line-height: 1.7;
@@ -40,9 +40,9 @@
 /* ── Tarjeta de paso ────────────────────────────────────────────── */
 .flow-card {
   width: 100%;
-  background: #161B22;
-  border: 1px solid #21262D;
-  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
   padding: 1.1rem 1.25rem;
   display: flex;
   align-items: flex-start;
@@ -64,12 +64,12 @@
 }
 
 /* Colores por etapa (igual a capturas) */
-.icon-sensor  { background: rgba(74,222,128,0.12); border-color: rgba(74,222,128,0.25); }
-.icon-esp32   { background: rgba(56,189,248,0.12); border-color: rgba(56,189,248,0.25); }
-.icon-flask   { background: rgba(167,139,250,0.12);border-color: rgba(167,139,250,0.25);}
-.icon-db      { background: rgba(251,191,36,0.12); border-color: rgba(251,191,36,0.25); }
-.icon-react   { background: rgba(236,72,153,0.12); border-color: rgba(236,72,153,0.25); }
-.icon-user    { background: rgba(99,102,241,0.12); border-color: rgba(99,102,241,0.25); }
+.icon-sensor  { background: color-mix(in srgb, var(--etapa-1) 12%, transparent); border-color: color-mix(in srgb, var(--etapa-1) 25%, transparent); }
+.icon-esp32   { background: color-mix(in srgb, var(--etapa-2) 12%, transparent); border-color: color-mix(in srgb, var(--etapa-2) 25%, transparent); }
+.icon-flask   { background: color-mix(in srgb, var(--etapa-3) 12%, transparent);border-color: color-mix(in srgb, var(--etapa-3) 25%, transparent);}
+.icon-db      { background: color-mix(in srgb, var(--etapa-4) 12%, transparent); border-color: color-mix(in srgb, var(--etapa-4) 25%, transparent); }
+.icon-react   { background: color-mix(in srgb, var(--etapa-5) 12%, transparent); border-color: color-mix(in srgb, var(--etapa-5) 25%, transparent); }
+.icon-user    { background: color-mix(in srgb, var(--etapa-6) 12%, transparent); border-color: color-mix(in srgb, var(--etapa-6) 25%, transparent); }
 
 /* Contenido: título + descripción */
 .flow-card-body {
@@ -77,32 +77,32 @@
 }
 
 .flow-card-title {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-data);
   font-size: 0.9rem;
   font-weight: 700;
   margin-bottom: 0.3rem;
 }
 
 /* Colores de título por etapa */
-.title-sensor { color: #4ADE80; }
-.title-esp32  { color: #38BDF8; }
-.title-flask  { color: #A78BFA; }
-.title-db     { color: #FBBF24; }
-.title-react  { color: #EC4899; }
-.title-user   { color: #818CF8; }
+.title-sensor { color: var(--etapa-1); }
+.title-esp32  { color: var(--etapa-2); }
+.title-flask  { color: var(--etapa-3); }
+.title-db     { color: var(--etapa-4); }
+.title-react  { color: var(--etapa-5); }
+.title-user   { color: var(--etapa-6); }
 
 .flow-card-desc {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-data);
   font-size: 0.76rem;
-  color: #8B949E;
+  color: var(--text-secondary);
   line-height: 1.6;
 }
 
 /* Número de paso (esquina superior derecha) */
 .flow-card-num {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-data);
   font-size: 0.72rem;
-  color: #30363D;
+  color: var(--line-strong);
   font-weight: 700;
   position: absolute;
   top: 1rem;
@@ -113,7 +113,7 @@
 .flow-arrow {
   width: 0;
   height: 28px;
-  border-left: 2px solid #21262D;
+  border-left: 2px solid var(--line);
   position: relative;
   display: flex;
   align-items: flex-end;
@@ -124,7 +124,7 @@
 .flow-arrow::after {
   content: '▼';
   font-size: 0.55rem;
-  color: #30363D;
+  color: var(--line-strong);
   position: absolute;
   bottom: -2px;
   left: 50%;
@@ -141,25 +141,25 @@
 }
 
 .eps-card {
-  background: #161B22;
-  border: 1px solid #21262D;
-  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
   padding: 1.25rem;
 }
 
 /* Título con color de la captura */
 .eps-title {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-data);
   font-size: 0.72rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: var(--label-tracking);
+  text-transform: var(--label-case);
   font-weight: 700;
   margin-bottom: 1rem;
 }
 
-.eps-title-entradas { color: #4ADE80; }
-.eps-title-procesos { color: #8B949E; }
-.eps-title-salidas  { color: #FBBF24; }
+.eps-title-entradas { color: var(--ok); }
+.eps-title-procesos { color: var(--text-secondary); }
+.eps-title-salidas  { color: var(--warn); }
 
 /* Lista de ítems */
 .eps-list {
@@ -170,9 +170,9 @@
 }
 
 .eps-list li {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-data);
   font-size: 0.75rem;
-  color: #8B949E;
+  color: var(--text-secondary);
   display: flex;
   align-items: flex-start;
   gap: 0.5rem;
@@ -182,7 +182,7 @@
 /* Punto decorativo antes de cada ítem */
 .eps-list li::before {
   content: '·';
-  color: #38BDF8;
+  color: var(--accent);
   font-size: 1.1rem;
   line-height: 1;
   flex-shrink: 0;

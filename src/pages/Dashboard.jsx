@@ -6,18 +6,21 @@ import {
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
 
-import { formatHora } from '../data/mockData'
+import { formatHora, radioPuntoAislado, opcionesGrafico } from '../data/formato'
 import { escucharHistorial24h } from '../data/firebaseService'
+import { useTema } from '../temas/TemaContext'
+import Aviso from '../components/Aviso'
 import './Dashboard.css'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend)
 
+// El color de cada línea sale del tema activo (useTema().coloresGrafico).
 const VARIABLES = {
-  temperatura: { label: 'Temperatura', color: '#FBBF24', unit: '°C',   key: 'temperatura' },
-  humedad:     { label: 'Humedad',     color: '#38BDF8', unit: '%',    key: 'humedad'     },
-  velocidad_viento: { label: 'Viento', color: '#34D399', unit: ' km/h', key: 'velocidad_viento' },
-  co_concentracion: { label: 'CO', color: '#FB7185', unit: ' ppm', key: 'co_concentracion' },
-  presion:     { label: 'Presión (opcional)', color: '#A78BFA', unit: ' hPa', key: 'presion' },
+  temperatura: { label: 'Temperatura', unit: '°C',   key: 'temperatura' },
+  humedad:     { label: 'Humedad',     unit: '%',    key: 'humedad'     },
+  velocidad_viento: { label: 'Viento', unit: ' km/h', key: 'velocidad_viento' },
+  co_concentracion: { label: 'CO', unit: ' ppm', key: 'co_concentracion' },
+  presion:     { label: 'Presión (opcional)', unit: ' hPa', key: 'presion' },
 }
 
 function calcDelta(actual, anterior, decimales = 1) {
@@ -27,10 +30,14 @@ function calcDelta(actual, anterior, decimales = 1) {
   return { texto: `${signo}${diff}`, tipo }
 }
 
-// Delta seguro: si falta un dato opcional, no intenta restarlo.
-function calcDeltaSeguro(actual, anterior, decimales = 1) {
+// Delta seguro: si no hay con qué comparar, lo dice en vez de restar.
+function calcDeltaSeguro(actual, lecturaAnterior, campo, decimales = 1) {
+  if (!lecturaAnterior) {
+    return { texto: 'Sin lectura anterior para comparar', tipo: 'none' }
+  }
+  const anterior = lecturaAnterior[campo]
   if (actual == null || anterior == null) {
-    return { texto: '—', tipo: 'same' }
+    return { texto: 'La lectura anterior no trajo este dato', tipo: 'none' }
   }
   return calcDelta(actual, anterior, decimales)
 }
@@ -38,6 +45,9 @@ function calcDeltaSeguro(actual, anterior, decimales = 1) {
 function MetricCard({ label, valor, unidad, delta, unidadDelta, colorClass, icono }) {
   const arrow = delta.tipo === 'up' ? '↑' : delta.tipo === 'down' ? '↓' : '→'
   const deltaClass = `metric-delta delta-${delta.tipo}`
+  const comparacion = delta.tipo === 'none'
+    ? delta.texto
+    : `${arrow} ${delta.texto}${unidadDelta} vs lectura anterior`
   return (
     <div className="metric-card">
       <div className="metric-header">
@@ -48,14 +58,13 @@ function MetricCard({ label, valor, unidad, delta, unidadDelta, colorClass, icon
         {valor != null ? valor : '—'}
         <span className="metric-unit">{unidad}</span>
       </div>
-      <span className={deltaClass}>
-        {arrow} {delta.texto}{delta.tipo !== 'same' || delta.texto !== '—' ? unidadDelta : ''} vs hora anterior
-      </span>
+      <span className={deltaClass}>{comparacion}</span>
     </div>
   )
 }
 
 export default function Dashboard() {
+  const { coloresGrafico } = useTema()
   const [varActiva, setVarActiva] = useState('temperatura')
   const [lectura, setLectura] = useState(null)
   const [historial, setHistorial] = useState([])
@@ -81,12 +90,12 @@ export default function Dashboard() {
     return () => dejarDeEscuchar()
   }, [intentoConexion])
 
-  if (cargando) return <p style={{ color: '#8B949E', padding: '2rem' }}>Cargando datos desde la base de datos...</p>
+  if (cargando) return <Aviso>Cargando las lecturas de la estación…</Aviso>
   if (error) {
     return (
       <section>
-        <h2 className="dash-section-title">Lectura en Tiempo Real</h2>
-        <div role="alert" style={{ color: '#F87171', padding: '1rem 2rem' }}>
+        <h2 className="dash-section-title">Lectura en tiempo real</h2>
+        <Aviso tipo="error">
           <p>No se pudieron cargar las lecturas desde Firestore.</p>
           <p>{error.code ? `${error.code}: ` : ''}{error.message ?? String(error)}</p>
           <button
@@ -99,11 +108,17 @@ export default function Dashboard() {
           >
             Reintentar
           </button>
-        </div>
+        </Aviso>
       </section>
     )
   }
-  if (!lectura || historial.length === 0) return <p style={{ color: '#8B949E', padding: '2rem' }}>Todavía no hay lecturas en la base de datos.</p>
+  if (!lectura || historial.length === 0) {
+    return (
+      <Aviso tipo="aviso">
+        No llegaron lecturas de la estación en las últimas 24 horas. Cuando el ESP32 envíe datos, van a aparecer acá.
+      </Aviso>
+    )
+  }
 
   // El historial viene ordenado de más viejo a más nuevo; excluimos la lectura
   // actual para comparar las tarjetas con la lectura anterior.
@@ -114,96 +129,71 @@ export default function Dashboard() {
     ? varActiva
     : variablesDisponibles[0]?.[0]
   const config = VARIABLES[variableActiva] ?? VARIABLES.temperatura
+  const color = coloresGrafico.variables[config.key]
 
   const chartData = {
     labels: historial.map(d => formatHora(d.timestamp)),
     datasets: [{
       label: config.label,
       data: historial.map(d => d[config.key]),
-      borderColor: config.color,
-      backgroundColor: `${config.color}18`,
+      borderColor: color,
+      backgroundColor: `${color}18`,
       borderWidth: 2,
-      pointRadius: 0,
+      pointRadius: radioPuntoAislado,
       pointHoverRadius: 4,
       tension: 0.4,
       fill: true,
     }]
   }
 
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: '#1C2333',
-        borderColor: '#30363D',
-        borderWidth: 1,
-        titleColor: '#8B949E',
-        bodyColor: '#E6EDF3',
-        bodyFont: { family: 'JetBrains Mono', size: 12 },
-        titleFont: { family: 'JetBrains Mono', size: 11 },
-        callbacks: { label: (ctx) => ` ${ctx.parsed.y}${config.unit}` }
-      }
-    },
-    scales: {
-      x: {
-        ticks: { color: '#484F58', font: { family: 'JetBrains Mono', size: 10 }, maxRotation: 0, maxTicksLimit: 12 },
-        grid: { color: '#21262D' },
-      },
-      y: {
-        ticks: { color: '#484F58', font: { family: 'JetBrains Mono', size: 10 }, padding: 8 },
-        grid: { color: '#21262D' },
-        border: { dash: [4, 4] },
-      }
-    },
-    interaction: { mode: 'index', intersect: false },
-  }
+  const chartOptions = opcionesGrafico(coloresGrafico, config.unit)
 
   const tarjetas = [
     {
-      label: 'TEMPERATURA', valor: lectura.temperatura, unidad: ' °C',
-      delta: calcDeltaSeguro(lectura.temperatura, penultima?.temperatura),
+      label: 'Temperatura', valor: lectura.temperatura, unidad: ' °C',
+      delta: calcDeltaSeguro(lectura.temperatura, penultima, 'temperatura'),
       unidadDelta: '°C', colorClass: 'color-temp', icono: '🌡️'
     },
     {
-      label: 'HUMEDAD', valor: lectura.humedad, unidad: ' %',
-      delta: calcDeltaSeguro(lectura.humedad, penultima?.humedad),
+      label: 'Humedad', valor: lectura.humedad, unidad: ' %',
+      delta: calcDeltaSeguro(lectura.humedad, penultima, 'humedad'),
       unidadDelta: '%', colorClass: 'color-hum', icono: '💧'
     },
     {
-      label: 'VELOCIDAD DEL VIENTO', valor: lectura.velocidad_viento, unidad: ' km/h',
-      delta: calcDeltaSeguro(lectura.velocidad_viento, penultima?.velocidad_viento),
+      label: 'Velocidad del viento', valor: lectura.velocidad_viento, unidad: ' km/h',
+      delta: calcDeltaSeguro(lectura.velocidad_viento, penultima, 'velocidad_viento'),
       unidadDelta: ' km/h', colorClass: 'color-wind', icono: '🌬️'
     },
     {
-      label: 'CO (MONÓXIDO DE CARBONO)', valor: lectura.co_concentracion, unidad: ' ppm',
-      delta: calcDeltaSeguro(lectura.co_concentracion, penultima?.co_concentracion),
+      label: 'CO (monóxido de carbono)', valor: lectura.co_concentracion, unidad: ' ppm',
+      delta: calcDeltaSeguro(lectura.co_concentracion, penultima, 'co_concentracion'),
       unidadDelta: ' ppm', colorClass: 'color-co', icono: '🫧'
     },
   ]
   tarjetas.push({
-    label: 'PRESIÓN ATM.', valor: lectura.presion, unidad: ' hPa',
-    delta: calcDeltaSeguro(lectura.presion, penultima?.presion),
+    label: 'Presión atmosférica', valor: lectura.presion, unidad: ' hPa',
+    delta: calcDeltaSeguro(lectura.presion, penultima, 'presion'),
     unidadDelta: ' hPa', colorClass: 'color-pres', icono: '🌀'
   })
   const tarjetasDisponibles = tarjetas.filter(t => t.valor != null)
 
   return (
     <section>
-      <h2 className="dash-section-title">Lectura en Tiempo Real</h2>
+      <h2 className="dash-section-title">Lectura en tiempo real</h2>
       <div className="dash-metrics-grid">
         {tarjetasDisponibles.length > 0
           ? tarjetasDisponibles.map(t => <MetricCard key={t.label} {...t} />)
-          : <p style={{ color: '#8B949E', padding: '1rem' }}>La última lectura no contiene mediciones disponibles.</p>}
+          : <Aviso tipo="aviso">La última lectura no contiene mediciones disponibles.</Aviso>}
       </div>
       <div className="dash-chart-panel">
         <div className="dash-chart-header">
-          <span className="dash-chart-title">Últimas 24 Horas</span>
+          <span className="dash-chart-title">Últimas 24 horas</span>
           <div className="chart-tabs">
             {variablesDisponibles.map(([key, cfg]) => (
               <button
                 key={key}
+                type="button"
+                aria-pressed={variableActiva === key}
                 className={`chart-tab ${variableActiva === key ? 'active' : ''}`}
                 onClick={() => setVarActiva(key)}
               >
@@ -215,7 +205,7 @@ export default function Dashboard() {
         <div className="dash-chart-wrapper">
           {variablesDisponibles.length > 0
             ? <Line data={chartData} options={chartOptions} />
-            : <p style={{ color: '#8B949E', padding: '1rem' }}>No hay variables con datos para graficar.</p>}
+            : <Aviso tipo="aviso">No hay variables con datos para graficar.</Aviso>}
         </div>
       </div>
     </section>

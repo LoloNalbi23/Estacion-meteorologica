@@ -5,12 +5,13 @@
 
 /* ── Contenedor principal del navbar ───────────────────────────── */
 .navbar {
-  background: #0D1117;
-  border-bottom: 1px solid #21262D;
+  background: var(--bg-base);
+  border-bottom: 1px solid var(--line);
   padding: 0 2rem;
   position: sticky;
   top: 0;
   z-index: 100;
+  transition: background-color 1.2s ease;
 }
 
 /* ── Fila superior: logo + título + estado ──────────────────────── */
@@ -18,6 +19,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
   padding: 0.9rem 0 0.5rem;
 }
 
@@ -33,14 +36,15 @@
 .navbar-icon {
   width: 44px;
   height: 44px;
-  background: #1C2333;
-  border: 1px solid #30363D;
+  background: var(--bg-surface);
+  border: 1px solid var(--line-strong);
   border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.3rem;
   flex-shrink: 0;
+  color: var(--accent);
 }
 
 /* Texto al lado del ícono */
@@ -50,40 +54,52 @@
 }
 
 .navbar-title {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--font-display);
   font-size: 1.25rem;
   font-weight: 700;
-  color: #E6EDF3;
+  color: var(--text-primary);
   letter-spacing: -0.02em;
   line-height: 1.2;
 }
 
-/* Subtítulo "ESP32 · API Flask · React · SQLite" */
+/* Subtítulo "Sensores ESP32 → Firebase" */
 .navbar-subtitle {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-data);
   font-size: 0.7rem;
-  color: #484F58;
+  color: var(--text-muted);
   letter-spacing: 0.02em;
   margin-top: 2px;
 }
 
-/* Grupo derecho: dot verde + hora + ícono refresh */
+/* Grupo derecho: punto de estado + última lectura */
 .navbar-status {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-data);
   font-size: 0.8rem;
-  color: #8B949E;
+  color: var(--text-secondary);
 }
+
+/* El color del punto y del texto depende del estado de la estación */
+.navbar-status {
+  --estado-color: var(--text-secondary);
+}
+.navbar-status.estado-en-linea { --estado-color: var(--ok); }
+.navbar-status.estado-inactiva { --estado-color: var(--warn); }
+.navbar-status.estado-error    { --estado-color: var(--danger); }
 
 .status-dot {
   width: 8px;
   height: 8px;
-  background: #4ADE80;
+  background: var(--estado-color);
   border-radius: 50%;
-  animation: blink 2s ease-in-out infinite;
   flex-shrink: 0;
+}
+
+/* Solo parpadea cuando la estación está enviando datos */
+.estado-en-linea .status-dot {
+  animation: blink 2s ease-in-out infinite;
 }
 
 @keyframes blink {
@@ -91,40 +107,31 @@
   50%       { opacity: 0.35; }
 }
 
-.status-online {
-  color: #4ADE80;
+@media (prefers-reduced-motion: reduce) {
+  .estado-en-linea .status-dot { animation: none; }
+}
+
+.status-texto {
+  color: var(--estado-color);
   font-weight: 600;
 }
 
 .status-time {
-  color: #8B949E;
-}
-
-/* Botón de refresh */
-.btn-refresh {
-  background: none;
-  border: none;
-  color: #484F58;
-  cursor: pointer;
-  font-size: 1rem;
-  padding: 4px;
-  border-radius: 6px;
-  transition: color 0.2s, background 0.2s;
-  display: flex;
-  align-items: center;
-}
-
-.btn-refresh:hover {
-  color: #38BDF8;
-  background: rgba(56,189,248,0.08);
+  color: var(--text-secondary);
 }
 
 /* ── Fila inferior: links de navegación ─────────────────────────── */
+/* En pantallas angostas los links se desplazan en horizontal en vez de
+   salirse de la pantalla (antes "Alertas" quedaba fuera de alcance). */
 .navbar-links {
   display: flex;
   gap: 0;
   padding-bottom: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+
+.navbar-links::-webkit-scrollbar { display: none; }
 
 /* Cada link del navbar */
 .nav-link {
@@ -132,27 +139,81 @@
   align-items: center;
   gap: 0.45rem;
   padding: 0.65rem 1.1rem;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-data);
   font-size: 0.82rem;
-  color: #8B949E;
+  color: var(--text-secondary);
   text-decoration: none;
   border-bottom: 2px solid transparent;
   transition: color 0.2s, border-color 0.2s;
   letter-spacing: 0.01em;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .nav-link:hover {
-  color: #38BDF8;
+  color: var(--accent);
 }
 
 /* Link activo — borde inferior y color cyan */
 .nav-link.active {
-  color: #38BDF8;
-  border-bottom-color: #38BDF8;
+  color: var(--accent);
+  border-bottom-color: var(--accent);
 }
 
 .nav-link svg {
   width: 15px;
   height: 15px;
   flex-shrink: 0;
+}
+
+/* ── Grupo derecho: estado + selector de estética ───────────────── */
+.navbar-acciones {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.25rem;
+}
+
+.selector-tema {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-family: var(--font-data);
+  font-size: 0.75rem;
+}
+
+.selector-tema-label {
+  color: var(--text-muted);
+  padding: 0 0.45rem 0 0.4rem;
+}
+
+.selector-tema-opcion {
+  font: inherit;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 0.2rem 0.65rem;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.selector-tema-opcion:hover { color: var(--text-primary); }
+
+.selector-tema-opcion[aria-pressed="true"] {
+  color: var(--accent);
+  background: var(--bg-hover);
+  border-color: var(--line-strong);
+}
+
+/* ── Responsive ─────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .navbar { padding: 0 1rem; }
+  .navbar-title { font-size: 1.05rem; }
+  .navbar-status { flex-wrap: wrap; font-size: 0.72rem; }
+  .nav-link { padding: 0.65rem 0.8rem; }
 }

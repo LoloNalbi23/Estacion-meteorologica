@@ -6,7 +6,7 @@ La aplicación no consulta APIs meteorológicas externas.
 
 ## Componentes
 
-- **ESP32 y sensores:** envían las mediciones que estén disponibles.
+- **ESP32 y sensores:** envían cada 5 minutos las mediciones que estén disponibles.
 - **API Flask:** recibe lecturas en `POST /api/lecturas`, valida sus valores y las guarda en Firestore.
 - **Firebase Firestore:** almacena las lecturas con la fecha asignada por el servidor.
 - **Frontend React:** escucha los últimos datos en el Dashboard y Alertas; consulta los períodos del Historial y muestra errores o estados vacíos si no puede cargar datos.
@@ -141,10 +141,24 @@ firebase deploy --only firestore:indexes
 
 También se pueden crear desde el link que Firestore muestra en la consola del navegador (F12) al faltar un índice. La creación tarda unos minutos.
 
+## Estéticas
+
+El selector **Estética** del encabezado cambia el aspecto de toda la aplicación y se recuerda en el navegador:
+
+| Estética | Idea |
+|---|---|
+| Original | Panel oscuro tipo sala de control |
+| Papel | Papel de registro de un termohigrógrafo: cuadrícula, tinta violeta para temperatura y roja para humedad |
+| Cielo | El color de la página sigue a la temperatura medida (azul con frío, ámbar y coral con calor) y la lectura principal aparece en grande |
+
+Los colores y fuentes de cada estética están en `src/temas/temas.css`. Para agregar una nueva, sumar un bloque `[data-tema="..."]` con las mismas variables y registrarla en `TEMAS` (`src/temas/temas.js`).
+
 ## Estructura principal
 
 ```text
 src/                 Frontend React y consultas a Firestore
+src/temas/           Estéticas (variables CSS) y selector de tema
+src/contexto/        Última lectura compartida en tiempo real
 routes/lecturas.py   Recepción y validación Flask de lecturas
 app.py               Inicialización de Firebase y servidor Flask
 scripts/simulador.mjs Simulador de POST HTTP

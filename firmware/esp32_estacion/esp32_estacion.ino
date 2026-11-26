@@ -21,7 +21,9 @@ constexpr float KMH_POR_PULSO_POR_SEGUNDO = NAN;
 DHT dht(DHT_PIN, DHT_TYPE);
 volatile uint32_t pulsosViento = 0;
 uint32_t ultimoEnvio = 0;
-constexpr uint32_t INTERVALO_ENVIO_MS = 60000;
+// Una lectura cada 5 minutos: 288 por día. La web muestra hasta 300 lecturas
+// en "Últimas 24 horas"; enviar más seguido dejaría afuera las más viejas.
+constexpr uint32_t INTERVALO_ENVIO_MS = 5UL * 60UL * 1000UL;
 
 void IRAM_ATTR contarPulsoViento() {
   ++pulsosViento;

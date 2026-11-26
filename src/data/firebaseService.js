@@ -302,31 +302,3 @@ export async function getHistorialAnio() {
     )
     .filter(Boolean)
 }
-
-// Umbrales configurados, como objeto { temperatura: { min, max }, ... }
-// (el ID de cada documento es el nombre de la variable).
-// Los documentos de 'umbrales' NO tienen timestamp, por eso no se usa
-// orderBy ni convertir() acá.
-export async function getUmbrales() {
-  const snap = await getDocs(collection(db, 'umbrales'))
-  const umbrales = {}
-  snap.forEach((d) => {
-    umbrales[d.id] = d.data()
-  })
-  return umbrales
-}
-
-// Las N alertas más recientes (la más nueva primero).
-// OJO: hoy las reglas de Firestore no permiten leer 'alertas' y nada las
-// crea todavía. Para que esta función ande hay que agregar la regla de
-// lectura y generar las alertas (por ejemplo, desde la ruta Flask).
-export async function getAlertas(n = 20) {
-  const cantidad = Math.min(Math.max(1, Math.floor(Number(n)) || 20), MAX_DOCS)
-  const q = query(
-    collection(db, 'alertas'),
-    orderBy('timestamp', 'desc'),
-    limit(cantidad)
-  )
-  const snap = await getDocs(q)
-  return snap.docs.map(convertir)
-}

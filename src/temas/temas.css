@@ -1,0 +1,251 @@
+/* ================================================================
+   temas.css — Estéticas disponibles
+   El tema activo se elige con el selector "Estética" del Navbar y se
+   guarda en <html data-tema="...">. Cada bloque define las mismas
+   variables; el resto del CSS solo usa var(--...).
+
+   Los colores de cada variable (--c-temp, --c-hum, ...) deben ser hex
+   de 6 dígitos: los gráficos les agregan transparencia como "#RRGGBBAA".
+   ================================================================ */
+
+/* ── Original: panel oscuro tipo sala de control ─────────────────── */
+:root,
+[data-tema="original"] {
+  color-scheme: dark;
+
+  --bg-base:    #0D1117;
+  --bg-card:    #161B22;
+  --bg-surface: #1C2333;
+  --bg-hover:   #21262D;
+
+  --line:        #21262D;
+  --line-strong: #30363D;
+  --line-faint:  #1C2333;
+
+  --text-primary:   #E6EDF3;
+  --text-secondary: #8B949E;
+  --text-muted:     #6E7681;
+
+  --accent: #38BDF8;
+  --ok:     #4ADE80;
+  --warn:   #FBBF24;
+  --danger: #F87171;
+  --info:   #818CF8;
+
+  /* Una tinta por variable medida */
+  --c-temp: #FBBF24;
+  --c-hum:  #38BDF8;
+  --c-wind: #34D399;
+  --c-co:   #FB7185;
+  --c-pres: #A78BFA;
+
+  /* Etapas del flujo del sistema (página Proyecto) */
+  --etapa-1: #4ADE80;
+  --etapa-2: #38BDF8;
+  --etapa-3: #A78BFA;
+  --etapa-4: #FBBF24;
+  --etapa-5: #EC4899;
+  --etapa-6: #818CF8;
+
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-data:    'JetBrains Mono', 'Courier New', monospace;
+  --font-num:     'JetBrains Mono', 'Courier New', monospace;
+  --num-weight:   700;
+
+  --label-case:     uppercase;
+  --label-tracking: 0.1em;
+
+  --radius-card:  12px;
+  --shadow-color: rgba(0, 0, 0, 0.4);
+  --icono-display: inline;
+
+  --page-pattern: none;
+  --page-pattern-size: auto;
+
+  /* Gráficos (Chart.js los lee desde acá) */
+  --chart-grid:     #21262D;
+  --chart-tick:     #6E7681;
+  --tooltip-bg:     #1C2333;
+  --tooltip-border: #30363D;
+  --tooltip-title:  #8B949E;
+  --tooltip-body:   #E6EDF3;
+
+  /* Tono del tema Cielo; lo actualiza la app según la temperatura */
+  --cielo-h: 205;
+}
+
+/* ── A · Papel de registro: termohigrógrafo de tambor ────────────── */
+/* Papel cuadriculado verdoso, tintas violeta (temperatura) y roja
+   (humedad) como las plumas del instrumento, números condensados. */
+[data-tema="papel"] {
+  color-scheme: light;
+
+  --bg-base:    #EEF3EC;
+  --bg-card:    #F8FAF6;
+  --bg-surface: #E7EEE5;
+  --bg-hover:   #E2EBE0;
+
+  --line:        #C6D6C9;
+  --line-strong: #9DB5A3;
+  --line-faint:  #DDE8DE;
+
+  --text-primary:   #1E2A23;
+  --text-secondary: #46584D;
+  --text-muted:     #5F7266;
+
+  --accent: #4B3A8C;
+  --ok:     #2F6B45;
+  --warn:   #8F5300;
+  --danger: #B3262F;
+  --info:   #1F4E8C;
+
+  --c-temp: #4B3A8C;
+  --c-hum:  #B3262F;
+  --c-wind: #2F6B45;
+  --c-co:   #84460F;
+  --c-pres: #1F4E8C;
+
+  --etapa-1: #2F6B45;
+  --etapa-2: #1F4E8C;
+  --etapa-3: #4B3A8C;
+  --etapa-4: #8F5300;
+  --etapa-5: #B3262F;
+  --etapa-6: #1E2A23;
+
+  --font-display: 'Barlow', system-ui, sans-serif;
+  --font-data:    'Barlow', system-ui, sans-serif;
+  --font-num:     'Barlow Condensed', 'Barlow', sans-serif;
+  --num-weight:   500;
+
+  --label-case:     none;
+  --label-tracking: 0.01em;
+
+  --radius-card:  3px;
+  --shadow-color: rgba(30, 42, 35, 0.12);
+  --icono-display: none;
+
+  --page-pattern:
+    linear-gradient(#DCE7DD 1px, transparent 1px),
+    linear-gradient(90deg, #DCE7DD 1px, transparent 1px);
+  --page-pattern-size: 24px 24px;
+
+  --chart-grid:     #D6E3D9;
+  --chart-tick:     #5F7266;
+  --tooltip-bg:     #FFFFFF;
+  --tooltip-border: #9DB5A3;
+  --tooltip-title:  #46584D;
+  --tooltip-body:   #1E2A23;
+}
+
+/* ── C · Cielo en vivo: el color sigue a la temperatura ──────────── */
+/* --cielo-h va de azul (frío) a ámbar y coral (calor). Fondos y textos
+   comparten ese tono; las tintas de cada variable son fijas y oscuras
+   para leerse sobre cualquier tono pastel. */
+[data-tema="cielo"] {
+  color-scheme: light;
+
+  --bg-base:    hsl(var(--cielo-h), 70%, 86%);
+  --bg-card:    hsl(var(--cielo-h), 75%, 92%);
+  --bg-surface: hsl(var(--cielo-h), 60%, 82%);
+  --bg-hover:   hsl(var(--cielo-h), 55%, 79%);
+
+  --line:        hsl(var(--cielo-h), 40%, 72%);
+  --line-strong: hsl(var(--cielo-h), 35%, 56%);
+  --line-faint:  hsl(var(--cielo-h), 50%, 82%);
+
+  --text-primary:   hsl(var(--cielo-h), 60%, 12%);
+  --text-secondary: hsl(var(--cielo-h), 40%, 24%);
+  --text-muted:     hsl(var(--cielo-h), 30%, 32%);
+
+  --accent: hsl(var(--cielo-h), 75%, 24%);
+  --ok:     #1D6638;
+  --warn:   #7F4400;
+  --danger: #9E2323;
+  --info:   #2D3E8C;
+
+  --c-temp: #A1360F;
+  --c-hum:  #14598A;
+  --c-wind: #1C6447;
+  --c-co:   #96244B;
+  --c-pres: #4A3796;
+
+  --etapa-1: #1C6447;
+  --etapa-2: #14598A;
+  --etapa-3: #4A3796;
+  --etapa-4: #7F4400;
+  --etapa-5: #96244B;
+  --etapa-6: #A1360F;
+
+  --font-display: 'Bricolage Grotesque', system-ui, sans-serif;
+  --font-data:    'Bricolage Grotesque', system-ui, sans-serif;
+  --font-num:     'Bricolage Grotesque', system-ui, sans-serif;
+  --num-weight:   500;
+
+  --label-case:     none;
+  --label-tracking: 0;
+
+  --radius-card:  16px;
+  --shadow-color: hsla(var(--cielo-h), 50%, 20%, 0.12);
+  --icono-display: none;
+
+  --page-pattern: none;
+  --page-pattern-size: auto;
+
+  --chart-grid:     hsl(var(--cielo-h), 45%, 80%);
+  --chart-tick:     hsl(var(--cielo-h), 30%, 32%);
+  --tooltip-bg:     hsl(var(--cielo-h), 75%, 95%);
+  --tooltip-border: hsl(var(--cielo-h), 35%, 56%);
+  --tooltip-title:  hsl(var(--cielo-h), 40%, 24%);
+  --tooltip-body:   hsl(var(--cielo-h), 60%, 12%);
+}
+
+/* La lectura principal (la primera tarjeta, normalmente temperatura)
+   ocupa todo el ancho con un número grande: es lo primero que se ve. */
+[data-tema="cielo"] .dash-metrics-grid > .metric-card:first-child {
+  grid-column: 1 / -1;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  padding: 0.25rem 0 1.25rem;
+}
+
+[data-tema="cielo"] .dash-metrics-grid > .metric-card:first-child .metric-value {
+  font-size: clamp(4.5rem, 14vw, 8.5rem);
+  letter-spacing: -0.04em;
+}
+
+[data-tema="cielo"] .dash-metrics-grid > .metric-card:first-child .metric-unit {
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+}
+
+/* En Papel, las tarjetas son hojas sobre la cuadrícula */
+[data-tema="papel"] .metric-card,
+[data-tema="papel"] .dash-chart-panel,
+[data-tema="papel"] .history-chart-panel,
+[data-tema="papel"] .history-table-panel,
+[data-tema="papel"] .alertas-list,
+[data-tema="papel"] .umbrales-panel,
+[data-tema="papel"] .flow-card,
+[data-tema="papel"] .eps-card {
+  box-shadow: 0 1px 2px var(--shadow-color);
+}
+
+/* Sin mayúsculas, las etiquetas pequeñas pierden presencia: en Papel y
+   Cielo se leen a un tamaño de texto normal. */
+:is([data-tema="papel"], [data-tema="cielo"]) :is(
+  .metric-label, .metric-delta, .dash-chart-title, .history-chart-label,
+  .history-table-title, .umbrales-title, .eps-title, .flow-card-desc,
+  .eps-list li, .alerta-texto, .umbral-nombre
+) {
+  font-size: 0.85rem;
+}
+
+:is([data-tema="papel"], [data-tema="cielo"]) :is(
+  .dash-section-title, .history-title, .alertas-section-title, .proyecto-main-title
+) {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+[data-tema="papel"] .metric-value { font-size: 3rem; }

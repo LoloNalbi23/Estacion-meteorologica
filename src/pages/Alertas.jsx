@@ -10,8 +10,9 @@
 // =============================================================
 
 import { useState, useEffect } from 'react'
-import { formatHora } from '../data/mockData'
-import { escucharLecturaActual } from '../data/firebaseService'
+import { formatHora, NOMBRE_CAMPO } from '../data/formato'
+import { useEstacion } from '../contexto/EstacionContext'
+import Aviso from '../components/Aviso'
 import './Alertas.css'
 
 // Si la última lectura tiene más minutos que esto, se avisa que los
@@ -19,8 +20,8 @@ import './Alertas.css'
 const LECTURA_VIEJA_MIN = 60
 
 const MSG_SIN_DATOS =
-  'Todavía no hay lecturas en la base de datos, así que no se pueden evaluar las alertas. ' +
-  'Cuando el sensor (o el simulador) guarde datos, van a aparecer acá.'
+  'La estación todavía no envió ninguna lectura, así que no se pueden evaluar las alertas. ' +
+  'Cuando el ESP32 envíe datos, van a aparecer acá.'
 
 const MSG_ERROR =
   'No se pudo consultar la base de datos. Abrí la consola del navegador (F12) para ver el detalle.'
@@ -169,7 +170,7 @@ function generarAlertas(lectura) {
       tipo:  'info',
       icono: 'ℹ️',
       texto: sinLectura.length
-        ? `No se superaron los umbrales evaluables; no hay datos de ${sinLectura.join(', ')}.`
+        ? `No se superaron los umbrales evaluables; la última lectura no trajo ${sinLectura.map(c => NOMBRE_CAMPO[c]).join(', ')}.`
         : lectura.presion == null
           ? 'Las variables con lectura están dentro de rango; no llegó la presión opcional del BME280.'
           : 'Todos los valores están dentro de los rangos configurados.',
@@ -198,44 +199,23 @@ function generarAlertas(lectura) {
   return alertas
 }
 
-// ── Sub-componente: cartel de estado (cargando / aviso / error) ───
-function Aviso({ tipo = 'info', children }) {
-  const colores = { info: '#8B949E', aviso: '#FBBF24', error: '#F87171' }
-  const color = colores[tipo]
-  return (
-    <div style={{
-      color,
-      background: '#1C2333',
-      border: `1px solid ${color}55`,
-      borderRadius: '8px',
-      padding: '1rem 1.25rem',
-      margin: '1rem 0',
-    }}>
-      {children}
-    </div>
-  )
-}
-
 // ── Componente principal ──────────────────────────────────────────
 export default function Alertas() {
   // Estados posibles de la lectura:
   //   undefined → todavía está cargando
   //   null      → se consultó y no hay ninguna lectura guardada
   //   objeto    → la última lectura
-  const [lectura, setLectura] = useState(undefined)
-  const [error, setError] = useState(null)
+  // Viene de la escucha en tiempo real compartida (EstacionContext): la
+  // pantalla se actualiza sola cuando el sensor guarda una lectura nueva.
+  const { lectura, error: errorFirestore } = useEstacion()
+  const error = errorFirestore ? MSG_ERROR : null
 
-  // Escucha en tiempo real: se suscribe al montar la página y se desuscribe
-  // al salir (el return del useEffect).
+  // Fuerza un re-render cada 30 s para que "hace X min" y el aviso de
+  // lectura vieja avancen aunque no llegue una lectura nueva.
+  const [, setTick] = useState(0)
   useEffect(() => {
-    const dejarDeEscuchar = escucharLecturaActual(
-      (l) => {
-        setError(null)
-        setLectura(l)
-      },
-      () => setError(MSG_ERROR)
-    )
-    return () => dejarDeEscuchar()
+    const timer = setInterval(() => setTick((t) => t + 1), 30 * 1000)
+    return () => clearInterval(timer)
   }, [])
 
   // ── Cartel según el estado: error, cargando o sin datos ─────────
@@ -244,13 +224,13 @@ export default function Alertas() {
     if (error) {
       cartel = <Aviso tipo="error">{error}</Aviso>
     } else if (lectura === undefined) {
-      cartel = <Aviso>Cargando datos desde la base de datos...</Aviso>
+      cartel = <Aviso>Cargando la última lectura de la estación…</Aviso>
     } else {
       cartel = <Aviso tipo="aviso">{MSG_SIN_DATOS}</Aviso>
     }
     return (
       <section>
-        <h2 className="alertas-section-title">Alertas del Sistema</h2>
+        <h2 className="alertas-section-title">Alertas del sistema</h2>
         {cartel}
       </section>
     )
@@ -266,13 +246,13 @@ export default function Alertas() {
 
   return (
     <section>
-      <h2 className="alertas-section-title">Alertas del Sistema</h2>
+      <h2 className="alertas-section-title">Alertas del sistema</h2>
 
       {/* ── Qué lectura se está evaluando ── */}
       {lectura.timestamp && (
         <Aviso tipo={lecturaVieja ? 'aviso' : 'info'}>
           Última lectura: {formatHora(lectura.timestamp)} ({textoHace(lectura.timestamp)}).
-          {lecturaVieja && ' Los valores pueden no reflejar el estado actual: el sensor no envía datos hace un rato.'}
+          {lecturaVieja && ' Los valores pueden no reflejar el estado actual: la estación no envía datos hace un rato.'}
         </Aviso>
       )}
 
@@ -294,7 +274,7 @@ export default function Alertas() {
 
       {/* ── Panel de umbrales configurados ── */}
       <div className="umbrales-panel">
-        <p className="umbrales-title">Umbrales Configurados</p>
+        <p className="umbrales-title">Umbrales configurados</p>
 
         {/* Muestra los límites y el estado de cada variable configurada. */}
         {UMBRALES_CONFIG.map((u, i) => {
@@ -306,7 +286,7 @@ export default function Alertas() {
           const chipClass = !tieneDato
             ? 'estado-chip estado-pendiente'
             : enAlerta ? 'estado-chip estado-alerta' : 'estado-chip estado-ok'
-          const chipLabel = !tieneDato ? 'SIN DATO' : enAlerta ? 'ALERTA' : 'OK'
+          const chipLabel = !tieneDato ? 'Sin dato' : enAlerta ? 'Alerta' : 'OK'
 
           return (
             <div key={i} className="umbral-row">

@@ -2,9 +2,9 @@
 // Usa API_URL y API_KEY_SENSOR desde .env; SIMULAR_PRESION=true agrega presión.
 // Uso: npm run simulador -- 1 (cada minuto); sin argumento, cada 5 minutos.
 
-const URL = env.API_URL
-const API_KEY = env.API_KEY_SENSOR
-const incluirPresion = 'true'
+const URL = process.env.API_URL
+const API_KEY = process.env.API_KEY_SENSOR
+const incluirPresion = process.env.SIMULAR_PRESION === 'true'
 
 if (!URL || !API_KEY) {
   console.error('Faltan variables en el .env: API_URL y/o API_KEY_SENSOR')
@@ -43,7 +43,6 @@ async function enviarLectura() {
     }
     if (incluirPresion) lectura.presion = Number(estado.presion.toFixed(1))
 
-    console.log('URL:', JSON.stringify(URL));
     const res = await fetch(URL, {
       method: 'POST',
       headers: {

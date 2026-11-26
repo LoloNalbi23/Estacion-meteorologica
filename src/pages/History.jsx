@@ -19,8 +19,10 @@ import {
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
 
-import { formatHora, formatFecha } from '../data/mockData'
+import { formatHora, formatFecha, radioPuntoAislado, opcionesGrafico } from '../data/formato'
 import { getHistorial24h, getHistorialSemana, getHistorialAnio } from '../data/firebaseService'
+import { useTema } from '../temas/TemaContext'
+import Aviso from '../components/Aviso'
 import './History.css'
 
 // Registro de módulos Chart.js (solo necesario una vez en la app,
@@ -28,13 +30,13 @@ import './History.css'
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend)
 
 // ── Configuración de variables históricas ────────────────────────
-// Cada entrada define qué variable graficar y con qué color
+// Cada entrada define qué variable graficar; el color sale del tema activo
 const GRAFICOS = [
-  { key: 'temperatura', label: 'TEMPERATURA', color: '#FBBF24', unit: '°C' },
-  { key: 'humedad', label: 'HUMEDAD', color: '#38BDF8', unit: '%' },
-  { key: 'velocidad_viento', label: 'VELOCIDAD DEL VIENTO', color: '#34D399', unit: ' km/h' },
-  { key: 'co_concentracion', label: 'CO (MONÓXIDO DE CARBONO)', color: '#FB7185', unit: ' ppm' },
-  { key: 'presion', label: 'PRESIÓN (OPCIONAL)', color: '#A78BFA', unit: ' hPa' },
+  { key: 'temperatura', label: 'Temperatura', unit: '°C' },
+  { key: 'humedad', label: 'Humedad', unit: '%' },
+  { key: 'velocidad_viento', label: 'Velocidad del viento', unit: ' km/h' },
+  { key: 'co_concentracion', label: 'CO (monóxido de carbono)', unit: ' ppm' },
+  { key: 'presion', label: 'Presión (opcional)', unit: ' hPa' },
 ]
 
 const CLASE_COLUMNA = {
@@ -47,9 +49,9 @@ const CLASE_COLUMNA = {
 
 // ── Mensajes ──────────────────────────────────────────────────────
 const MSG_VACIO = {
-  '1d': 'No hay lecturas de las últimas 24 horas en la base de datos. Cuando el sensor (o el simulador) guarde datos, van a aparecer acá.',
-  '7d': 'No hay datos de la última semana en la base de datos todavía.',
-  '12m': 'No hay datos del último año en la base de datos todavía.',
+  '1d': 'No llegaron lecturas de la estación en las últimas 24 horas. Cuando el ESP32 envíe datos, van a aparecer acá.',
+  '7d': 'La estación no envió lecturas en los últimos 7 días.',
+  '12m': 'La estación no envió lecturas en los últimos 12 meses.',
 }
 
 const MSG_ERROR =
@@ -62,63 +64,21 @@ const ESPERADOS = {
   '12m': { cantidad: 12, unidad: 'meses' },
 }
 
-// ── Opciones comunes de Chart.js para todos los gráficos ─────────
-// Recibe el color de la variable para personalizar el tooltip
-function makeChartOptions(color, unit) {
-  return {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: '#1C2333',
-        borderColor: '#30363D',
-        borderWidth: 1,
-        titleColor: '#8B949E',
-        bodyColor: '#E6EDF3',
-        bodyFont: { family: 'JetBrains Mono', size: 12 },
-        titleFont: { family: 'JetBrains Mono', size: 11 },
-        callbacks: {
-          label: (ctx) => ` ${ctx.parsed.y}${unit}`
-        }
-      }
-    },
-    scales: {
-      x: {
-        ticks: {
-          color: '#484F58',
-          font: { family: 'JetBrains Mono', size: 9 },
-          maxRotation: 0,
-          maxTicksLimit: 8,
-        },
-        grid: { color: '#1C2333' },
-      },
-      y: {
-        ticks: {
-          color: '#484F58',
-          font: { family: 'JetBrains Mono', size: 9 },
-          padding: 6,
-        },
-        grid: { color: '#1C2333' },
-        border: { dash: [4, 4] },
-      }
-    },
-    interaction: { mode: 'index', intersect: false },
-  }
-}
-
 // ── Sub-componente: un panel con un único gráfico ─────────────────
 function ChartPanel({ config, labels, datos }) {
+  const { coloresGrafico } = useTema()
+  const color = coloresGrafico.variables[config.key]
+
   // Construye el objeto de datos que espera Chart.js
   const chartData = {
     labels,
     datasets: [{
       label: config.label,
       data: datos.map(d => d[config.key]),
-      borderColor: config.color,
-      backgroundColor: `${config.color}15`,
+      borderColor: color,
+      backgroundColor: `${color}15`,
       borderWidth: 2,
-      pointRadius: 0,
+      pointRadius: radioPuntoAislado,
       pointHoverRadius: 4,
       tension: 0.4,
       fill: true,
@@ -129,26 +89,8 @@ function ChartPanel({ config, labels, datos }) {
     <div className="history-chart-panel">
       <p className="history-chart-label">{config.label}</p>
       <div className="history-chart-wrapper">
-        <Line data={chartData} options={makeChartOptions(config.color, config.unit)} />
+        <Line data={chartData} options={opcionesGrafico(coloresGrafico, config.unit, { tamTicks: 9, maxTicks: 8 })} />
       </div>
-    </div>
-  )
-}
-
-// ── Sub-componente: cartel de estado (cargando / aviso / error) ───
-function Aviso({ tipo = 'info', children }) {
-  const colores = { info: '#8B949E', aviso: '#FBBF24', error: '#F87171' }
-  const color = colores[tipo]
-  return (
-    <div style={{
-      color,
-      background: '#1C2333',
-      border: `1px solid ${color}55`,
-      borderRadius: '8px',
-      padding: '1rem 1.25rem',
-      margin: '1rem 0',
-    }}>
-      {children}
     </div>
   )
 }
@@ -224,9 +166,9 @@ export default function History() {
 
   // Título dinámico según período
   const tituloSeccion = {
-    '1d': 'DATOS HISTÓRICOS — ÚLTIMAS 24 H',
-    '7d': 'DATOS HISTÓRICOS — ÚLTIMA SEMANA',
-    '12m': 'DATOS HISTÓRICOS — ÚLTIMO AÑO',
+    '1d': 'Datos históricos — últimas 24 h',
+    '7d': 'Datos históricos — última semana',
+    '12m': 'Datos históricos — último año',
   }[periodo]
 
   // ── Cuerpo según el estado: error, cargando, vacío o con datos ───
@@ -234,7 +176,7 @@ export default function History() {
   if (error) {
     cuerpo = <Aviso tipo="error">{error}</Aviso>
   } else if (cargandoActual) {
-    cuerpo = <Aviso>Cargando datos desde la base de datos...</Aviso>
+    cuerpo = <Aviso>Cargando el historial de la estación…</Aviso>
   } else if (datos.length === 0) {
     cuerpo = <Aviso tipo="aviso">{MSG_VACIO[periodo]}</Aviso>
   } else {
@@ -279,6 +221,8 @@ export default function History() {
           ].map(p => (
             <button
               key={p.key}
+              type="button"
+              aria-pressed={periodo === p.key}
               className={`period-tab ${periodo === p.key ? 'active' : ''}`}
               onClick={() => setPeriodo(p.key)}
             >
@@ -297,7 +241,7 @@ export default function History() {
       {!error && !cargandoActual && datos.length > 0 &&
         historial24h && historial24h.length > 0 && (
           <div className="history-table-panel">
-            <p className="history-table-title">Tabla de Registros</p>
+            <p className="history-table-title">Tabla de registros</p>
 
             <table className="reg-table">
               <thead>

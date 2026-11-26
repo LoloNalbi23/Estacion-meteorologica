@@ -5,12 +5,12 @@
 
 /* ── Encabezado de sección ──────────────────────────────────────── */
 .dash-section-title {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-data);
   font-size: 0.75rem;
   font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #8B949E;
+  letter-spacing: var(--label-tracking);
+  text-transform: var(--label-case);
+  color: var(--text-secondary);
   margin-bottom: 1.2rem;
 }
 
@@ -31,9 +31,9 @@
 
 /* ── Tarjeta individual de métrica ──────────────────────────────── */
 .metric-card {
-  background: #161B22;
-  border: 1px solid #21262D;
-  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
   padding: 1.1rem 1.25rem 1rem;
   display: flex;
   flex-direction: column;
@@ -42,8 +42,8 @@
 }
 
 .metric-card:hover {
-  border-color: rgba(56,189,248,0.3);
-  box-shadow: 0 0 16px rgba(56,189,248,0.06);
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 6%, transparent);
 }
 
 /* Fila superior: nombre + ícono */
@@ -54,23 +54,24 @@
 }
 
 .metric-label {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-data);
   font-size: 0.68rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #8B949E;
+  letter-spacing: var(--label-tracking);
+  text-transform: var(--label-case);
+  color: var(--text-secondary);
   font-weight: 500;
 }
 
 .metric-icon {
+  display: var(--icono-display);
   font-size: 1.1rem;
   opacity: 0.8;
 }
 
 /* Valor principal (número grande) */
 .metric-value {
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 700;
+  font-family: var(--font-num);
+  font-weight: var(--num-weight);
   font-size: 2.4rem;
   line-height: 1;
   display: flex;
@@ -81,36 +82,35 @@
 .metric-unit {
   font-size: 1rem;
   font-weight: 400;
-  color: #8B949E;
+  color: var(--text-secondary);
 }
 
 /* Comparativa vs hora anterior */
 .metric-delta {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-data);
   font-size: 0.72rem;
   display: flex;
   align-items: center;
   gap: 0.25rem;
 }
 
-.delta-up   { color: #4ADE80; }
-.delta-down { color: #F87171; }
-.delta-same { color: #8B949E; }
+.delta-up   { color: var(--ok); }
+.delta-down { color: var(--danger); }
+.delta-same { color: var(--text-secondary); }
+.delta-none { color: var(--text-muted); }
 
 /* ── Colores por variable (igual a las capturas) ────────────────── */
-.color-temp  { color: #FBBF24; }   /* naranja/ámbar — temperatura */
-.color-hum   { color: #38BDF8; }   /* cyan — humedad */
-.color-pres  { color: #A78BFA; }   /* violeta — presión */
-.color-wind  { color: #38BDF8; }   /* cyan — viento */
-.color-co    { color: #FB7185; }   /* rosa — CO */
-.color-uv    { color: #FB923C; }   /* naranja oscuro — UV */
-.color-rain  { color: #E6EDF3; }   /* blanco — precipitación */
+.color-temp  { color: var(--c-temp); }   /* naranja/ámbar — temperatura */
+.color-hum   { color: var(--c-hum); }   /* cyan — humedad */
+.color-pres  { color: var(--c-pres); }   /* violeta — presión */
+.color-wind  { color: var(--c-wind); }   /* verde — viento (igual que su gráfico) */
+.color-co    { color: var(--c-co); }   /* rosa — CO */
 
 /* ── Panel del gráfico inferior ─────────────────────────────────── */
 .dash-chart-panel {
-  background: #161B22;
-  border: 1px solid #21262D;
-  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
   padding: 1.25rem 1.5rem 1rem;
 }
 
@@ -125,42 +125,43 @@
 }
 
 .dash-chart-title {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-data);
   font-size: 0.75rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #8B949E;
+  letter-spacing: var(--label-tracking);
+  text-transform: var(--label-case);
+  color: var(--text-secondary);
 }
 
 /* Grupo de tabs para seleccionar variable */
 .chart-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.35rem;
 }
 
 .chart-tab {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-data);
   font-size: 0.72rem;
   padding: 0.3rem 0.75rem;
   border-radius: 6px;
   border: none;
   cursor: pointer;
-  background: #1C2333;
-  color: #8B949E;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
   transition: all 0.15s;
   font-weight: 500;
 }
 
 .chart-tab:hover {
-  background: #21262D;
-  color: #E6EDF3;
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 /* Tab activo — fondo sólido */
 .chart-tab.active {
-  background: #21262D;
-  color: #E6EDF3;
-  border: 1px solid #30363D;
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border: 1px solid var(--line-strong);
 }
 
 /* Contenedor del canvas de Chart.js */

@@ -7,7 +7,7 @@
 import './Proyecto.css'
 
 // ── Datos de los pasos del flujo (se renderizan como tarjetas) ────
-// Cada paso representa una capa de la arquitectura ESP32 → Flask → React
+// Cada paso representa una capa del recorrido: sensores → ESP32 → Firebase → web
 const PASOS = [
   {
     num: 1,
@@ -15,7 +15,7 @@ const PASOS = [
     titleClass: 'title-sensor',
     icono: '📡',
     titulo: 'Sensores',
-    desc: 'Puede enviar temperatura, humedad relativa, viento y CO; cada medición se acepta por separado y la presión del BME280 es opcional',
+    desc: 'Miden temperatura y humedad relativa (DHT22), viento (anemómetro) y CO (MQ-7); la presión (BME280) es opcional',
   },
   {
     num: 2,
@@ -23,31 +23,31 @@ const PASOS = [
     titleClass: 'title-esp32',
     icono: '🔧',
     titulo: 'ESP32',
-    desc: 'Microcontrolador: toma las mediciones disponibles y envía una lectura parcial por WiFi cuando algún sensor no responde',
+    desc: 'Toma las mediciones cada 5 minutos y las envía por WiFi; si un sensor no responde, envía solo los valores disponibles',
   },
   {
     num: 3,
     iconClass: 'icon-flask',
     titleClass: 'title-flask',
     icono: '🖥️',
-    titulo: 'API Flask',
-    desc: 'Backend Python: recibe POST /api/lecturas, valida cada valor recibido y guarda la lectura con fecha del servidor',
+    titulo: 'Servidor receptor',
+    desc: 'Recibe las lecturas del ESP32, descarta valores fuera de rango y las guarda en Firebase con la hora del servidor',
   },
   {
     num: 4,
     iconClass: 'icon-db',
     titleClass: 'title-db',
     icono: '🗄️',
-    titulo: 'Base de Datos',
-    desc: 'Firestore almacena las mediciones disponibles como series históricas; los campos que faltan se mantienen sin dato',
+    titulo: 'Firebase',
+    desc: 'Firestore guarda cada lectura como parte del historial; los campos que faltan quedan sin dato',
   },
   {
     num: 5,
     iconClass: 'icon-react',
     titleClass: 'title-react',
     icono: '🌐',
-    titulo: 'Frontend React',
-    desc: 'React consulta Firestore directamente: el Dashboard y las alertas escuchan cambios en vivo, y el historial consulta los períodos',
+    titulo: 'Página web',
+    desc: 'Lee Firebase directamente: el Dashboard y las alertas se actualizan solos cuando llega una lectura, y el historial arma los promedios',
   },
   {
     num: 6,
@@ -68,23 +68,21 @@ const ENTRADAS = [
 ]
 
 const PROCESOS = [
-  'Lectura periódica de sensores',
-  'Lectura y calibración según el sensor instalado',
-  'Envío de los campos que tengan medición',
-  'Transmisión WiFi (HTTP POST)',
-  'Validación de valores en Flask',
+  'Lectura de los sensores cada 5 minutos',
+  'Calibración según el sensor instalado',
+  'Envío por WiFi de los campos que tengan medición',
+  'Validación de rangos en el servidor receptor',
   'Almacenamiento en Firebase Firestore',
-  'Generación de alertas',
-  'Cálculo de promedios',
+  'Comparación con los umbrales de alerta',
+  'Cálculo de promedios diarios y mensuales',
 ]
 
 const SALIDAS = [
   'Datos en tiempo real',
   'Gráficos históricos',
   'Tabla de registros',
-  'Alertas y notificaciones',
+  'Alertas por umbrales',
   'Lecturas parciales cuando falta un sensor',
-  'Ingreso de datos para el ESP32 mediante POST',
 ]
 
 // ── Componente principal ──────────────────────────────────────────
@@ -93,7 +91,7 @@ export default function Proyecto() {
     <section>
       {/* Título y descripción general */}
       <div className="proyecto-header">
-        <p className="proyecto-main-title">Arquitectura del Sistema</p>
+        <p className="proyecto-main-title">Arquitectura del sistema</p>
         <p className="proyecto-subtitle">
           Flujo de datos desde los sensores hasta la visualización en el navegador del usuario.
         </p>
