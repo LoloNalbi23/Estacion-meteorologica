@@ -82,20 +82,23 @@ const IconCloud = () => (
 function SelectorTema() {
   const { tema, setTema } = useTema()
   return (
-    <div className="selector-tema" role="group" aria-label="Estética">
-      <span className="selector-tema-label">Estética</span>
-      {TEMAS.map((t) => (
-        <button
-          key={t.id}
-          type="button"
-          className="selector-tema-opcion"
-          aria-pressed={tema === t.id}
-          title={t.descripcion}
-          onClick={() => setTema(t.id)}
-        >
-          {t.nombre}
-        </button>
-      ))}
+    <div className="selector-tema">
+      {/* Etiqueta afuera del recuadro: así no se confunde con una opción */}
+      <span className="selector-tema-label" id="etiqueta-estetica">Estética</span>
+      <div className="selector-tema-opciones" role="group" aria-labelledby="etiqueta-estetica">
+        {TEMAS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            className="selector-tema-opcion"
+            aria-pressed={tema === t.id}
+            title={t.descripcion}
+            onClick={() => setTema(t.id)}
+          >
+            {t.nombre}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }
