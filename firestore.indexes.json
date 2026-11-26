@@ -1,0 +1,24 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "lecturas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "timestamp", "order": "ASCENDING" },
+        { "fieldPath": "co_concentracion", "order": "ASCENDING" },
+        { "fieldPath": "humedad", "order": "ASCENDING" },
+        { "fieldPath": "temperatura", "order": "ASCENDING" },
+        { "fieldPath": "velocidad_viento", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "lecturas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "timestamp", "order": "ASCENDING" },
+        { "fieldPath": "presion", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

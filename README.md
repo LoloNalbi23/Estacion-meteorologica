@@ -115,6 +115,32 @@ npm run simulador -- 1  # cada 1 minuto
 
 Por defecto omite presión. Para incluir una presión ficticia, configurar `SIMULAR_PRESION=true`. Los datos del simulador no son mediciones de los sensores reales.
 
+### Datos aleatorios directamente en Firestore
+
+`scripts/datos_random.py` llena la base con un historial ficticio de una sola vez, escribiendo en Firestore con la clave de administrador (no pasa por Flask). Sirve para probar el Dashboard con datos y para que el Historial de 24 h, 7 días y 12 meses tenga puntos.
+
+```bash
+python scripts/datos_random.py                      # 288 lecturas en las últimas 24 h
+python scripts/datos_random.py -n 1000 -d 7         # 1000 lecturas en 7 días
+python scripts/datos_random.py -n 300 -d 365        # repartidas en el último año
+python scripts/datos_random.py --sin-presion        # sin el campo presion
+python scripts/datos_random.py --semilla 42         # misma corrida, mismos valores
+```
+
+Genera valores plausibles con un ciclo diario de temperatura y humedad, ráfagas de viento y picos ocasionales de CO. **No son mediciones reales** y no reemplazan al simulador cuando se quiere probar el POST a Flask.
+
+### Índices de Firestore (opcional pero recomendado)
+
+El Historial de semana/año promedia con consultas de agregación. Firestore exige **índices compuestos** para eso; están definidos en `firestore.indexes.json`. Si faltan, la app lo detecta y calcula los promedios en el navegador, así que el Historial funciona igual, pero gasta más lecturas de la cuota gratuita.
+
+Para crearlos con Firebase CLI:
+
+```bash
+firebase deploy --only firestore:indexes
+```
+
+También se pueden crear desde el link que Firestore muestra en la consola del navegador (F12) al faltar un índice. La creación tarda unos minutos.
+
 ## Estructura principal
 
 ```text
@@ -122,8 +148,10 @@ src/                 Frontend React y consultas a Firestore
 routes/lecturas.py   Recepción y validación Flask de lecturas
 app.py               Inicialización de Firebase y servidor Flask
 scripts/simulador.mjs Simulador de POST HTTP
+scripts/datos_random.py Carga de lecturas ficticias en Firestore
 firmware/             Base de firmware ESP32
 requirements.txt      Dependencias Python
+firestore.indexes.json Índices compuestos para los promedios del Historial
 ```
 
 ## Pendiente de hardware

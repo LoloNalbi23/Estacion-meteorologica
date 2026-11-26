@@ -130,11 +130,23 @@ export function escucharHistorial24h(callback, onError) {
 // queda null y el gráfico muestra un hueco; eso no descarta las demás. Un
 // día o mes se omite solo si no tiene documentos.
 //
-// La primera vez, Firestore puede pedir crear un ÍNDICE COMPUESTO: el error
-// que aparece en la consola del navegador (F12) trae un link. Hay que
-// tocarlo, crear el índice, esperar unos minutos y recargar.
+// La primera vez, Firestore puede pedir crear ÍNDICES COMPUESTOS: el error
+// que aparece en la consola del navegador (F12) trae un link. También están
+// definidos en firestore.indexes.json. Mientras falten, la app calcula los
+// promedios en el navegador con los documentos del período (funciona igual,
+// pero gasta más lecturas).
 
 const redondear = (n, decimales) => Number(n.toFixed(decimales))
+
+// Firestore permite como máximo 5 agregaciones por consulta, así que los
+// promedios van en dos consultas (count + 4 variables, y presión aparte).
+// Además, promediar con un rango de fechas necesita un ÍNDICE COMPUESTO.
+// Si el proyecto todavía no lo tiene, se calculan los promedios en el
+// navegador a partir de las lecturas; es más caro en lecturas, pero evita
+// que el Historial quede inutilizable hasta crear el índice.
+// La definición de los índices está en firestore.indexes.json.
+const MAX_DOCS_POR_RANGO = 500
+let agregacionesDisponibles = true
 
 // Promedio independiente por variable entre 'inicio' (incluido) y 'fin'
 // (excluido). Devuelve null solo si no hay documentos en el rango.
@@ -144,14 +156,39 @@ async function promediarRango(inicio, fin) {
     where('timestamp', '>=', Timestamp.fromDate(inicio)),
     where('timestamp', '<', Timestamp.fromDate(fin))
   )
-  const snap = await getAggregateFromServer(q, {
-    muestras: count(),
-    temperatura: average('temperatura'),
-    humedad: average('humedad'),
-    velocidad_viento: average('velocidad_viento'),
-    co_concentracion: average('co_concentracion'),
-    presion: average('presion'),
-  })
+
+  if (agregacionesDisponibles) {
+    try {
+      return await promediarConAgregaciones(q)
+    } catch (error) {
+      // 'failed-precondition' es el código con el que Firestore avisa que
+      // falta un índice compuesto. Se recuerda para no reintentar en cada
+      // día/mes y se sigue con el cálculo local.
+      if (error?.code !== 'failed-precondition') throw error
+      agregacionesDisponibles = false
+      console.warn(
+        'Firestore no tiene los índices para promediar; se calculan los ' +
+        'promedios en el navegador. Ver firestore.indexes.json.'
+      )
+    }
+  }
+
+  return promediarConDocumentos(inicio, fin)
+}
+
+// Camino eficiente: Firestore hace los promedios del lado del servidor.
+async function promediarConAgregaciones(q) {
+  const [snap, snapPresion] = await Promise.all([
+    getAggregateFromServer(q, {
+      muestras: count(),
+      temperatura: average('temperatura'),
+      humedad: average('humedad'),
+      velocidad_viento: average('velocidad_viento'),
+      co_concentracion: average('co_concentracion'),
+    }),
+    getAggregateFromServer(q, { presion: average('presion') }),
+  ])
+
   const d = snap.data()
   if (!d.muestras) return null
 
@@ -165,7 +202,55 @@ async function promediarRango(inicio, fin) {
     velocidad_viento: promedioDe(d.velocidad_viento),
     co_concentracion: promedioDe(d.co_concentracion),
   }
-  if (d.presion != null) promedio.presion = promedioDe(d.presion)
+  const presion = snapPresion.data().presion
+  if (presion != null) promedio.presion = promedioDe(presion)
+  return promedio
+}
+
+// Camino alternativo sin índices: trae hasta MAX_DOCS_POR_RANGO lecturas del
+// período y promedia en JavaScript. Solo se leen los campos de medición.
+async function promediarConDocumentos(inicio, fin) {
+  const q = query(
+    collection(db, 'lecturas'),
+    where('timestamp', '>=', Timestamp.fromDate(inicio)),
+    where('timestamp', '<', Timestamp.fromDate(fin)),
+    orderBy('timestamp', 'desc'),
+    limit(MAX_DOCS_POR_RANGO)
+  )
+  const snap = await getDocs(q)
+  if (snap.empty) return null
+
+  const sumas = {}
+  const cuentas = {}
+  for (const campo of CAMPOS_MEDICION) {
+    sumas[campo] = 0
+    cuentas[campo] = 0
+  }
+
+  snap.forEach((docSnap) => {
+    const d = docSnap.data()
+    for (const campo of CAMPOS_MEDICION) {
+      const valor = d[campo]
+      if (typeof valor === 'number' && Number.isFinite(valor)) {
+        sumas[campo] += valor
+        cuentas[campo] += 1
+      }
+    }
+  })
+
+  const promedioDe = (campo) => {
+    if (!cuentas[campo]) return null
+    return redondear(sumas[campo] / cuentas[campo], 1)
+  }
+
+  const promedio = {
+    muestras: snap.size,
+    temperatura: promedioDe('temperatura'),
+    humedad: promedioDe('humedad'),
+    velocidad_viento: promedioDe('velocidad_viento'),
+    co_concentracion: promedioDe('co_concentracion'),
+  }
+  if (cuentas.presion) promedio.presion = promedioDe('presion')
   return promedio
 }
 
